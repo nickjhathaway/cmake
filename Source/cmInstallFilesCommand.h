@@ -3,7 +3,14 @@
 #ifndef cmInstallFilesCommand_h
 #define cmInstallFilesCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmInstallFilesCommand
  * \brief Specifies where to install some files
@@ -27,11 +34,6 @@ public:
                    cmExecutionStatus& status) CM_OVERRIDE;
 
   /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "install_files"; }
-
-  /**
    * This is called at the end after all the information
    * specified by the command is accumulated. Most commands do
    * not implement this method.  At this point, reading and
@@ -39,8 +41,6 @@ public:
    */
   void FinalPass() CM_OVERRIDE;
   bool HasFinalPass() const CM_OVERRIDE { return !this->IsFilesForm; }
-
-  cmTypeMacro(cmInstallFilesCommand, cmCommand);
 
 protected:
   void CreateInstallGenerator() const;

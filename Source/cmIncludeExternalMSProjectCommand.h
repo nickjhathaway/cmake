@@ -3,7 +3,14 @@
 #ifndef cmIncludeExternalMSProjectCommand_h
 #define cmIncludeExternalMSProjectCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmIncludeExternalMSProjectCommand
  * \brief Specify an external MS project file for inclusion in the workspace.
@@ -29,16 +36,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE
-  {
-    return "include_external_msproject";
-  }
-
-  cmTypeMacro(cmIncludeExternalMSProjectCommand, cmCommand);
 };
 
 #endif

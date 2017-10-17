@@ -3,11 +3,10 @@
 #ifndef cmCPackArchiveGenerator_h
 #define cmCPackArchiveGenerator_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmArchiveWrite.h"
 #include "cmCPackGenerator.h"
-#include "cmTypeMacro.h"
 
 #include <iosfwd>
 #include <string>
@@ -23,7 +22,7 @@ class cmCPackComponent;
 class cmCPackArchiveGenerator : public cmCPackGenerator
 {
 public:
-  cmTypeMacro(cmCPackArchiveGenerator, cmCPackGenerator);
+  typedef cmCPackGenerator Superclass;
 
   /**
    * Construct generator
@@ -34,6 +33,11 @@ public:
   virtual int GenerateHeader(std::ostream* os);
   // component support
   bool SupportsComponentInstallation() const CM_OVERRIDE;
+
+private:
+  // get archive component filename
+  std::string GetArchiveComponentFileName(const std::string& component,
+                                          bool isGroupName);
 
 protected:
   int InitializeInternal() CM_OVERRIDE;

@@ -3,10 +3,9 @@
 #ifndef cmCTestCoverageCommand_h
 #define cmCTestCoverageCommand_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTestHandlerCommand.h"
-#include "cmTypeMacro.h"
 
 #include <set>
 #include <string>
@@ -40,7 +39,7 @@ public:
    */
   std::string GetName() const CM_OVERRIDE { return "ctest_coverage"; }
 
-  cmTypeMacro(cmCTestCoverageCommand, cmCTestHandlerCommand);
+  typedef cmCTestHandlerCommand Superclass;
 
 protected:
   cmCTestGenericHandler* InitializeHandler() CM_OVERRIDE;

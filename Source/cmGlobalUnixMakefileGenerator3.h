@@ -3,12 +3,7 @@
 #ifndef cmGlobalUnixMakefileGenerator3_h
 #define cmGlobalUnixMakefileGenerator3_h
 
-#include <cmConfigure.h>
-
-#include "cmGeneratorTarget.h"
-#include "cmGlobalCommonGenerator.h"
-#include "cmGlobalGeneratorFactory.h"
-#include "cmState.h"
+#include "cmConfigure.h"
 
 #include <iosfwd>
 #include <map>
@@ -16,6 +11,11 @@
 #include <stddef.h>
 #include <string>
 #include <vector>
+
+#include "cmGeneratorTarget.h"
+#include "cmGlobalCommonGenerator.h"
+#include "cmGlobalGeneratorFactory.h"
+#include "cmStateSnapshot.h"
 
 class cmGeneratedFileStream;
 class cmLocalGenerator;
@@ -149,6 +149,8 @@ public:
   /** Does the make tool tolerate .DELETE_ON_ERROR? */
   virtual bool AllowDeleteOnError() const { return true; }
 
+  bool IsIPOSupported() const CM_OVERRIDE { return true; }
+
   void ComputeTargetObjectDirectory(cmGeneratorTarget* gt) const CM_OVERRIDE;
 
   std::string IncludeDirective;
@@ -248,8 +250,8 @@ private:
   const char* GetBuildIgnoreErrorsFlag() const CM_OVERRIDE { return "-i"; }
   std::string GetEditCacheCommand() const CM_OVERRIDE;
 
-  std::map<cmState::Snapshot, std::set<cmGeneratorTarget const*>,
-           cmState::Snapshot::StrictWeakOrder>
+  std::map<cmStateSnapshot, std::set<cmGeneratorTarget const*>,
+           cmStateSnapshot::StrictWeakOrder>
     DirectoryTargetsMap;
   void InitializeProgressMarks() CM_OVERRIDE;
 };

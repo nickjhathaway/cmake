@@ -3,11 +3,11 @@
 #ifndef cmLinkedTree_h
 #define cmLinkedTree_h
 
-#include <cmConfigure.h>
-
-#include "cmStandardIncludes.h"
+#include "cmConfigure.h"
 
 #include <assert.h>
+#include <iterator>
+#include <vector>
 
 /**
   @brief A adaptor for traversing a tree structure in a vector

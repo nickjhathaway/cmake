@@ -3,9 +3,15 @@
 #ifndef cmExportCommand_h
 #define cmExportCommand_h
 
-#include "cmCommand.h"
+#include "cmConfigure.h"
 
-class cmExportBuildFileGenerator;
+#include <string>
+#include <vector>
+
+#include "cmCommand.h"
+#include "cmCommandArgumentsHelper.h"
+
+class cmExecutionStatus;
 class cmExportSet;
 
 /** \class cmExportLibraryDependenciesCommand
@@ -30,14 +36,8 @@ public:
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
 
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "export"; }
-
-  cmTypeMacro(cmExportCommand, cmCommand);
-
 private:
+  cmCommandArgumentsHelper Helper;
   cmCommandArgumentGroup ArgumentGroup;
   cmCAStringVector Targets;
   cmCAEnabler Append;

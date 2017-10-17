@@ -3,11 +3,10 @@
 #ifndef cmCPackTarCompressGenerator_h
 #define cmCPackTarCompressGenerator_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCPackArchiveGenerator.h"
 #include "cmCPackGenerator.h"
-#include "cmTypeMacro.h"
 
 /** \class cmCPackTarCompressGenerator
  * \brief A generator for TarCompress files

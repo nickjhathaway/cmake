@@ -2,8 +2,15 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmMacroCommand.h"
 
+#include <sstream>
+#include <stdio.h>
+
 #include "cmAlgorithms.h"
-#include "cmake.h"
+#include "cmExecutionStatus.h"
+#include "cmMakefile.h"
+#include "cmPolicies.h"
+#include "cmState.h"
+#include "cmSystemTools.h"
 
 // define the class for macro commands
 class cmMacroHelperCommand : public cmCommand
@@ -13,14 +20,6 @@ public:
 
   ///! clean up any memory allocated by the macro
   ~cmMacroHelperCommand() CM_OVERRIDE {}
-
-  /**
-   * This is used to avoid including this command
-   * in documentation. This is mainly used by
-   * cmMacroHelperCommand and cmFunctionHelperCommand
-   * which cannot provide appropriate documentation.
-   */
-  bool ShouldAppearInDocumentation() const CM_OVERRIDE { return false; }
 
   /**
    * This is a virtual constructor for the command.
@@ -37,11 +36,6 @@ public:
   }
 
   /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
    * This is called when the command is first encountered in
    * the CMakeLists.txt file.
    */
@@ -53,13 +47,6 @@ public:
   {
     return false;
   }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return this->Args[0]; }
-
-  cmTypeMacro(cmMacroHelperCommand, cmCommand);
 
   std::vector<std::string> Args;
   std::vector<cmListFileFunction> Functions;
@@ -154,15 +141,15 @@ bool cmMacroHelperCommand::InvokeInitialPass(
       // The error message should have already included the call stack
       // so we do not need to report an error here.
       macroScope.Quiet();
-      inStatus.SetNestedError(true);
+      inStatus.SetNestedError();
       return false;
     }
     if (status.GetReturnInvoked()) {
-      inStatus.SetReturnInvoked(true);
+      inStatus.SetReturnInvoked();
       return true;
     }
     if (status.GetBreakInvoked()) {
-      inStatus.SetBreakInvoked(true);
+      inStatus.SetBreakInvoked();
       return true;
     }
   }
@@ -187,10 +174,7 @@ bool cmMacroFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
       f->Functions = this->Functions;
       f->FilePath = this->GetStartingContext().FilePath;
       mf.RecordPolicies(f->Policies);
-      std::string newName = "_" + this->Args[0];
-      mf.GetState()->RenameCommand(this->Args[0], newName);
-      mf.GetState()->AddCommand(f);
-
+      mf.GetState()->AddScriptedCommand(this->Args[0], f);
       // remove the function blocker now that the macro is defined
       mf.RemoveFunctionBlocker(this, lff);
       return true;

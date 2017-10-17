@@ -3,10 +3,11 @@
 #ifndef cmSystemTools_h
 #define cmSystemTools_h
 
-#include <cmConfigure.h> // IWYU pragma: keep
+#include "cmConfigure.h"
 
-#include <cmsys/Process.h>
-#include <cmsys/SystemTools.hxx>
+#include "cmProcessOutput.h"
+#include "cmsys/Process.h"
+#include "cmsys/SystemTools.hxx" // IWYU pragma: export
 #include <stddef.h>
 #include <string>
 #include <vector>
@@ -23,6 +24,7 @@ class cmSystemTools : public cmsys::SystemTools
 {
 public:
   typedef cmsys::SystemTools Superclass;
+  typedef cmProcessOutput::Encoding Encoding;
 
   /** Expand out any arguments in the vector that have ; separated
    *  strings into multiple arguments.  A new vector is created
@@ -233,7 +235,8 @@ public:
                                int* retVal = CM_NULLPTR,
                                const char* dir = CM_NULLPTR,
                                OutputOption outputflag = OUTPUT_MERGE,
-                               double timeout = 0.0);
+                               double timeout = 0.0,
+                               Encoding encoding = cmProcessOutput::Auto);
 
   static std::string PrintSingleCommand(std::vector<std::string> const&);
 
@@ -249,6 +252,15 @@ public:
   /** Parse arguments out of a unix command line string.  */
   static void ParseUnixCommandLine(const char* command,
                                    std::vector<std::string>& args);
+
+  /**
+   * Handle response file in an argument list and return a new argument list
+   * **/
+  static std::vector<std::string> HandleResponseFile(
+    std::vector<std::string>::const_iterator argBeg,
+    std::vector<std::string>::const_iterator argEnd);
+
+  static size_t CalculateCommandLineLengthLimit();
 
   static void EnableMessages() { s_DisableMessages = false; }
   static void DisableMessages() { s_DisableMessages = true; }
@@ -374,9 +386,10 @@ public:
       original environment. */
   class SaveRestoreEnvironment
   {
+    CM_DISABLE_COPY(SaveRestoreEnvironment)
   public:
     SaveRestoreEnvironment();
-    virtual ~SaveRestoreEnvironment();
+    ~SaveRestoreEnvironment();
 
   private:
     std::vector<std::string> Env;

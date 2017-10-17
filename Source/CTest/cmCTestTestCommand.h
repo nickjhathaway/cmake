@@ -3,10 +3,9 @@
 #ifndef cmCTestTestCommand_h
 #define cmCTestTestCommand_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTestHandlerCommand.h"
-#include "cmTypeMacro.h"
 
 #include <string>
 
@@ -39,8 +38,6 @@ public:
    */
   std::string GetName() const CM_OVERRIDE { return "ctest_test"; }
 
-  cmTypeMacro(cmCTestTestCommand, cmCTestHandlerCommand);
-
 protected:
   virtual cmCTestGenericHandler* InitializeActualHandler();
   cmCTestGenericHandler* InitializeHandler() CM_OVERRIDE;
@@ -56,6 +53,9 @@ protected:
     ctt_INCLUDE,
     ctt_EXCLUDE_LABEL,
     ctt_INCLUDE_LABEL,
+    ctt_EXCLUDE_FIXTURE,
+    ctt_EXCLUDE_FIXTURE_SETUP,
+    ctt_EXCLUDE_FIXTURE_CLEANUP,
     ctt_PARALLEL_LEVEL,
     ctt_SCHEDULE_RANDOM,
     ctt_STOP_TIME,

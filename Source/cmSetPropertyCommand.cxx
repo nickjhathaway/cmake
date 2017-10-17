@@ -2,9 +2,20 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmSetPropertyCommand.h"
 
-#include "cmSetSourceFilesPropertiesCommand.h"
-#include "cmSetTargetPropertiesCommand.h"
-#include "cmSetTestsPropertiesCommand.h"
+#include <sstream>
+
+#include "cmGlobalGenerator.h"
+#include "cmInstalledFile.h"
+#include "cmMakefile.h"
+#include "cmProperty.h"
+#include "cmSourceFile.h"
+#include "cmState.h"
+#include "cmSystemTools.h"
+#include "cmTarget.h"
+#include "cmTest.h"
+#include "cmake.h"
+
+class cmExecutionStatus;
 
 cmSetPropertyCommand::cmSetPropertyCommand()
 {
@@ -127,7 +138,7 @@ bool cmSetPropertyCommand::HandleGlobalMode()
 
   // Set or append the property.
   cmake* cm = this->Makefile->GetCMakeInstance();
-  const char* name = this->PropertyName.c_str();
+  std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
     value = CM_NULLPTR;
@@ -177,7 +188,7 @@ bool cmSetPropertyCommand::HandleDirectoryMode()
   }
 
   // Set or append the property.
-  const char* name = this->PropertyName.c_str();
+  std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
     value = CM_NULLPTR;
@@ -218,7 +229,7 @@ bool cmSetPropertyCommand::HandleTargetMode()
 bool cmSetPropertyCommand::HandleTarget(cmTarget* target)
 {
   // Set or append the property.
-  const char* name = this->PropertyName.c_str();
+  std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
     value = CM_NULLPTR;
@@ -257,7 +268,7 @@ bool cmSetPropertyCommand::HandleSourceMode()
 bool cmSetPropertyCommand::HandleSource(cmSourceFile* sf)
 {
   // Set or append the property.
-  const char* name = this->PropertyName.c_str();
+  std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
     value = CM_NULLPTR;
@@ -305,7 +316,7 @@ bool cmSetPropertyCommand::HandleTestMode()
 bool cmSetPropertyCommand::HandleTest(cmTest* test)
 {
   // Set or append the property.
-  const char* name = this->PropertyName.c_str();
+  std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
     value = CM_NULLPTR;
@@ -331,7 +342,7 @@ bool cmSetPropertyCommand::HandleCacheMode()
       return false;
     }
   } else if (this->PropertyName == "TYPE") {
-    if (!cmState::IsCacheEntryType(this->PropertyValue.c_str())) {
+    if (!cmState::IsCacheEntryType(this->PropertyValue)) {
       std::ostringstream e;
       e << "given invalid CACHE entry TYPE \"" << this->PropertyValue << "\"";
       this->SetError(e.str());
@@ -372,7 +383,7 @@ bool cmSetPropertyCommand::HandleCacheMode()
 bool cmSetPropertyCommand::HandleCacheEntry(std::string const& cacheKey)
 {
   // Set or append the property.
-  const char* name = this->PropertyName.c_str();
+  std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   cmState* state = this->Makefile->GetState();
   if (this->Remove) {

@@ -3,7 +3,7 @@
 #ifndef cmExtraSublimeTextGenerator_h
 #define cmExtraSublimeTextGenerator_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmExternalMakefileProjectGenerator.h"
 
@@ -64,6 +64,9 @@ private:
 
   std::string ComputeDefines(cmSourceFile* source, cmLocalGenerator* lg,
                              cmGeneratorTarget* gtgt);
+
+  bool ExcludeBuildFolder;
+  std::string EnvSettings;
 };
 
 #endif

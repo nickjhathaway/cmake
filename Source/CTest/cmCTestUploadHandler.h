@@ -3,11 +3,10 @@
 #ifndef cmCTestUploadHandler_h
 #define cmCTestUploadHandler_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTest.h"
 #include "cmCTestGenericHandler.h"
-#include "cmTypeMacro.h"
 
 /** \class cmCTestUploadHandler
  * \brief Helper class for CTest
@@ -18,7 +17,7 @@
 class cmCTestUploadHandler : public cmCTestGenericHandler
 {
 public:
-  cmTypeMacro(cmCTestUploadHandler, cmCTestGenericHandler);
+  typedef cmCTestGenericHandler Superclass;
 
   cmCTestUploadHandler();
   ~cmCTestUploadHandler() CM_OVERRIDE {}

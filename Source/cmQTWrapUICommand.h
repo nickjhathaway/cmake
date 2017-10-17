@@ -3,9 +3,14 @@
 #ifndef cmQTWrapUICommand_h
 #define cmQTWrapUICommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
 
-#include "cmSourceFile.h"
+class cmExecutionStatus;
 
 /** \class cmQTWrapUICommand
  * \brief Create .h and .cxx files rules for Qt user interfaces files
@@ -15,7 +20,6 @@
 class cmQTWrapUICommand : public cmCommand
 {
 public:
-  cmTypeMacro(cmQTWrapUICommand, cmCommand);
   /**
    * This is a virtual constructor for the command.
    */
@@ -27,11 +31,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "qt_wrap_ui"; }
 };
 
 #endif

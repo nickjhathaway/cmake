@@ -2,8 +2,19 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmFindBase.h"
 
+#include "cmConfigure.h"
+#include <deque>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <stddef.h>
+
 #include "cmAlgorithms.h"
+#include "cmMakefile.h"
+#include "cmSearchPath.h"
 #include "cmState.h"
+#include "cmStateTypes.h"
+#include "cmSystemTools.h"
 
 cmFindBase::cmFindBase()
 {
@@ -56,6 +67,8 @@ bool cmFindBase::ParseArguments(std::vector<std::string> const& argsIn)
     return true;
   }
   this->AlreadyInCache = false;
+
+  this->SelectDefaultNoPackageRootPath();
 
   // Find the current root path mode.
   this->SelectDefaultRootPathMode();
@@ -149,6 +162,9 @@ bool cmFindBase::ParseArguments(std::vector<std::string> const& argsIn)
 void cmFindBase::ExpandPaths()
 {
   if (!this->NoDefaultPath) {
+    if (!this->NoPackageRootPath) {
+      this->FillPackageRootPath();
+    }
     if (!this->NoCMakePath) {
       this->FillCMakeVariablePath();
     }
@@ -184,6 +200,25 @@ void cmFindBase::FillCMakeEnvironmentPath()
   } else {
     paths.AddEnvPath("CMAKE_FRAMEWORK_PATH");
   }
+  paths.AddSuffixes(this->SearchPathSuffixes);
+}
+
+void cmFindBase::FillPackageRootPath()
+{
+  cmSearchPath& paths = this->LabeledPaths[PathLabel::PackageRoot];
+
+  // Add package specific search prefixes
+  // NOTE: This should be using const_reverse_iterator but HP aCC and
+  //       Oracle sunCC both currently have standard library issues
+  //       with the reverse iterator APIs.
+  for (std::deque<std::string>::reverse_iterator pkg =
+         this->Makefile->FindPackageModuleStack.rbegin();
+       pkg != this->Makefile->FindPackageModuleStack.rend(); ++pkg) {
+    std::string varName = *pkg + "_ROOT";
+    paths.AddCMakePrefixPath(varName);
+    paths.AddEnvPrefixPath(varName);
+  }
+
   paths.AddSuffixes(this->SearchPathSuffixes);
 }
 
@@ -300,7 +335,7 @@ bool cmFindBase::CheckForVariableInCache()
     cmState* state = this->Makefile->GetState();
     const char* cacheEntry = state->GetCacheEntryValue(this->VariableName);
     bool found = !cmSystemTools::IsNOTFOUND(cacheValue);
-    bool cached = cacheEntry ? true : false;
+    bool cached = cacheEntry != CM_NULLPTR;
     if (found) {
       // If the user specifies the entry on the command line without a
       // type we should add the type and docstring but keep the
@@ -308,7 +343,7 @@ bool cmFindBase::CheckForVariableInCache()
       // this.
       if (cached &&
           state->GetCacheEntryType(this->VariableName) ==
-            cmState::UNINITIALIZED) {
+            cmStateEnums::UNINITIALIZED) {
         this->AlreadyInCacheWithoutMetaInfo = true;
       }
       return true;

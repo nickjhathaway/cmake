@@ -2,6 +2,7 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmDefinitions.h"
 
+#include "cmConfigure.h"
 #include <assert.h>
 #include <set>
 #include <utility>

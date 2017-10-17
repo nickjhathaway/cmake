@@ -2,7 +2,14 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmVariableWatchCommand.h"
 
+#include <sstream>
+
+#include "cmExecutionStatus.h"
+#include "cmListFileCache.h"
+#include "cmMakefile.h"
+#include "cmSystemTools.h"
 #include "cmVariableWatch.h"
+#include "cmake.h"
 
 struct cmVariableWatchCallbackData
 {
@@ -99,7 +106,7 @@ bool cmVariableWatchCommand::InitialPass(std::vector<std::string> const& args,
     this->SetError("must be called with at least one argument.");
     return false;
   }
-  std::string variable = args[0];
+  std::string const& variable = args[0];
   std::string command;
   if (args.size() > 1) {
     command = args[1];

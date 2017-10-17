@@ -3,7 +3,14 @@
 #ifndef cmAddSubDirectoryCommand_h
 #define cmAddSubDirectoryCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmAddSubDirectoryCommand
  * \brief Specify a subdirectory to build
@@ -26,13 +33,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "add_subdirectory"; }
-
-  cmTypeMacro(cmAddSubDirectoryCommand, cmCommand);
 };
 
 #endif

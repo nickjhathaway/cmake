@@ -3,7 +3,14 @@
 #ifndef cmAddCustomTargetCommand_h
 #define cmAddCustomTargetCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmAddCustomTargetCommand
  * \brief Command that adds a target to the build system.
@@ -26,13 +33,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "add_custom_target"; }
-
-  cmTypeMacro(cmAddCustomTargetCommand, cmCommand);
 };
 
 #endif

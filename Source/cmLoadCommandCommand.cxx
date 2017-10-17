@@ -2,19 +2,25 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmLoadCommandCommand.h"
 
+#include <signal.h>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "cmCPluginAPI.cxx"
 #include "cmCPluginAPI.h"
 #include "cmDynamicLoader.h"
+#include "cmMakefile.h"
+#include "cmState.h"
+#include "cmSystemTools.h"
 
-#include <cmsys/DynamicLoader.hxx>
-
-#include <stdlib.h>
+class cmExecutionStatus;
 
 #ifdef __QNX__
 #include <malloc.h> /* for malloc/free on QNX */
 #endif
 
-#include <signal.h>
 extern "C" void TrapsForSignalsCFunction(int sig);
 
 // a class for loadabple commands
@@ -57,13 +63,8 @@ public:
   void FinalPass() CM_OVERRIDE;
   bool HasFinalPass() const CM_OVERRIDE
   {
-    return this->info.FinalPass ? true : false;
+    return this->info.FinalPass != CM_NULLPTR;
   }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return info.Name; }
 
   static const char* LastName;
   static void TrapsForSignals(int sig)
@@ -92,8 +93,6 @@ public:
       signal(SIGILL, CM_NULLPTR);
     }
   }
-
-  cmTypeMacro(cmLoadedCommand, cmCommand);
 
   cmLoadedCommandInfo info;
 };
@@ -169,11 +168,6 @@ cmLoadedCommand::~cmLoadedCommand()
 bool cmLoadCommandCommand::InitialPass(std::vector<std::string> const& args,
                                        cmExecutionStatus&)
 {
-  if (this->Disallowed(
-        cmPolicies::CMP0031,
-        "The load_command command should not be called; see CMP0031.")) {
-    return true;
-  }
   if (args.empty()) {
     return true;
   }
@@ -203,7 +197,7 @@ bool cmLoadCommandCommand::InitialPass(std::vector<std::string> const& args,
   }
 
   // Try to find the program.
-  std::string fullPath = cmSystemTools::FindFile(moduleName.c_str(), path);
+  std::string fullPath = cmSystemTools::FindFile(moduleName, path);
   if (fullPath == "") {
     std::ostringstream e;
     e << "Attempt to load command failed from file \"" << moduleName << "\"";
@@ -232,14 +226,14 @@ bool cmLoadCommandCommand::InitialPass(std::vector<std::string> const& args,
   // find the init function
   std::string initFuncName = args[0] + "Init";
   CM_INIT_FUNCTION initFunction =
-    (CM_INIT_FUNCTION)cmsys::DynamicLoader::GetSymbolAddress(
-      lib, initFuncName.c_str());
+    (CM_INIT_FUNCTION)cmsys::DynamicLoader::GetSymbolAddress(lib,
+                                                             initFuncName);
   if (!initFunction) {
     initFuncName = "_";
     initFuncName += args[0];
     initFuncName += "Init";
     initFunction = (CM_INIT_FUNCTION)(
-      cmsys::DynamicLoader::GetSymbolAddress(lib, initFuncName.c_str()));
+      cmsys::DynamicLoader::GetSymbolAddress(lib, initFuncName));
   }
   // if the symbol is found call it to set the name on the
   // function blocker
@@ -247,7 +241,7 @@ bool cmLoadCommandCommand::InitialPass(std::vector<std::string> const& args,
     // create a function blocker and set it up
     cmLoadedCommand* f = new cmLoadedCommand();
     (*initFunction)(&f->info);
-    this->Makefile->GetState()->AddCommand(f);
+    this->Makefile->GetState()->AddScriptedCommand(args[0], f);
     return true;
   }
   this->SetError("Attempt to load command failed. "

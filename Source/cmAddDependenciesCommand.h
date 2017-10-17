@@ -3,7 +3,14 @@
 #ifndef cmDependenciessCommand_h
 #define cmDependenciessCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmAddDependenciesCommand
  * \brief Add a dependency to a target
@@ -24,13 +31,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "add_dependencies"; }
-
-  cmTypeMacro(cmAddDependenciesCommand, cmCommand);
 };
 
 #endif

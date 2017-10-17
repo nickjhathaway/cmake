@@ -77,31 +77,43 @@ The replace expression may refer to paren-delimited subexpressions of the
 match using ``\1``, ``\2``, ..., ``\9``.  Note that two backslashes (``\\1``)
 are required in CMake code to get a backslash through argument parsing.
 
+.. _`Regex Specification`:
+
 Regex Specification
 """""""""""""""""""
 
 The following characters have special meaning in regular expressions:
 
-::
-
-   ^         Matches at beginning of input
-   $         Matches at end of input
-   .         Matches any single character
-   [ ]       Matches any character(s) inside the brackets
-   [^ ]      Matches any character(s) not inside the brackets
-    -        Inside brackets, specifies an inclusive range between
-             characters on either side e.g. [a-f] is [abcdef]
-             To match a literal - using brackets, make it the first
-             or the last character e.g. [+*/-] matches basic
-             mathematical operators.
-   *         Matches preceding pattern zero or more times
-   +         Matches preceding pattern one or more times
-   ?         Matches preceding pattern zero or once only
-   |         Matches a pattern on either side of the |
-   ()        Saves a matched subexpression, which can be referenced
-             in the REGEX REPLACE operation. Additionally it is saved
-             by all regular expression-related commands, including
-             e.g. if( MATCHES ), in the variables CMAKE_MATCH_(0..9).
+``^``
+  Matches at beginning of input
+``$``
+  Matches at end of input
+``.``
+  Matches any single character
+``[ ]``
+  Matches any character(s) inside the brackets
+``[^ ]``
+  Matches any character(s) not inside the brackets
+``-``
+  Inside brackets, specifies an inclusive range between
+  characters on either side e.g. ``[a-f]`` is ``[abcdef]``
+  To match a literal ``-`` using brackets, make it the first
+  or the last character e.g. ``[+*/-]`` matches basic
+  mathematical operators.
+``*``
+  Matches preceding pattern zero or more times
+``+``
+  Matches preceding pattern one or more times
+``?``
+  Matches preceding pattern zero or once only
+``|``
+  Matches a pattern on either side of the ``|``
+``()``
+  Saves a matched subexpression, which can be referenced
+  in the ``REGEX REPLACE`` operation. Additionally it is saved
+  by all regular expression-related commands, including
+  e.g. :command:`if(MATCHES)`, in the variables
+  :variable:`CMAKE_MATCH_<n>` for ``<n>`` 0..9.
 
 ``*``, ``+`` and ``?`` have higher precedence than concatenation.  ``|``
 has lower precedence than concatenation.  This means that the regular
@@ -206,15 +218,38 @@ Comparison
 
 Compare the strings and store true or false in the output variable.
 
+.. _`Supported Hash Algorithms`:
+
 Hashing
 ^^^^^^^
 
 ::
 
-  string(<MD5|SHA1|SHA224|SHA256|SHA384|SHA512>
-         <output variable> <input>)
+  string(<HASH> <output variable> <input>)
 
 Compute a cryptographic hash of the input string.
+The supported ``<HASH>`` algorithm names are:
+
+``MD5``
+  Message-Digest Algorithm 5, RFC 1321.
+``SHA1``
+  US Secure Hash Algorithm 1, RFC 3174.
+``SHA224``
+  US Secure Hash Algorithms, RFC 4634.
+``SHA256``
+  US Secure Hash Algorithms, RFC 4634.
+``SHA384``
+  US Secure Hash Algorithms, RFC 4634.
+``SHA512``
+  US Secure Hash Algorithms, RFC 4634.
+``SHA3_224``
+  Keccak SHA-3.
+``SHA3_256``
+  Keccak SHA-3.
+``SHA3_384``
+  Keccak SHA-3.
+``SHA3_512``
+  Keccak SHA-3.
 
 Generation
 ^^^^^^^^^^
@@ -273,6 +308,7 @@ specifiers:
 
 ::
 
+   %%        A literal percent sign (%).
    %d        The day of the current month (01-31).
    %H        The hour on a 24-hour clock (00-23).
    %I        The hour on a 12-hour clock (01-12).
@@ -305,6 +341,12 @@ If no explicit ``<format string>`` is given it will default to:
   string(MAKE_C_IDENTIFIER <input string> <output variable>)
 
 Write a string which can be used as an identifier in C.
+
+.. note::
+
+  If the ``SOURCE_DATE_EPOCH`` environment variable is set,
+  its value will be used instead of the current time.
+  See https://reproducible-builds.org/specs/source-date-epoch/ for details.
 
 UUID
 """"

@@ -227,7 +227,7 @@ Available commands are:
 ``copy <file>... <destination>``
   Copy files to ``<destination>`` (either file or directory).
   If multiple files are specified, the ``<destination>`` must be
-  directory and it must exist.
+  directory and it must exist. Wildcards are not supported.
 
 ``copy_directory <dir>... <destination>``
   Copy directories to ``<destination>`` directory.
@@ -263,8 +263,10 @@ Available commands are:
      052f86c15bbde68af55c7f7b340ab639  file2.txt
 
 ``remove [-f] <file>...``
-  Remove the file(s), use ``-f`` to force it.  If a file does
-  not exist it will be silently ignored.
+  Remove the file(s). If any of the listed files already do not
+  exist, the command returns a non-zero exit code, but no message
+  is logged. The ``-f`` option changes the behavior to return a
+  zero exit code (i.e. success) in such situations instead.
 
 ``remove_directory <dir>``
   Remove a directory and its contents.  If a directory does
@@ -314,6 +316,9 @@ The following ``cmake -E`` commands are available only on UNIX:
 
 ``create_symlink <old> <new>``
   Create a symbolic link ``<new>`` naming ``<old>``.
+
+.. note::
+  Path to where ``<new>`` symbolic link will be created has to exist beforehand.
 
 Windows-specific Command-Line Tools
 -----------------------------------

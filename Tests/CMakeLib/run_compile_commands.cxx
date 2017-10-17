@@ -1,12 +1,14 @@
-#include "cmSystemTools.h"
+#include <cmConfigure.h>
 
-#include <cmsys/FStream.hxx>
+#include "cmsys/FStream.hxx"
 #include <iostream>
 #include <map>
 #include <stdlib.h>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "cmSystemTools.h"
 
 class CompileCommandParser
 {

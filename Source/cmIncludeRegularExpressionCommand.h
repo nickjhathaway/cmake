@@ -3,7 +3,14 @@
 #ifndef cmIncludeRegularExpressionCommand_h
 #define cmIncludeRegularExpressionCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmIncludeRegularExpressionCommand
  * \brief Set the regular expression for following #includes.
@@ -28,16 +35,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE
-  {
-    return "include_regular_expression";
-  }
-
-  cmTypeMacro(cmIncludeRegularExpressionCommand, cmCommand);
 };
 
 #endif

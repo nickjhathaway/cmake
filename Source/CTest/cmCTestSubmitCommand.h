@@ -3,11 +3,10 @@
 #ifndef cmCTestSubmitCommand_h
 #define cmCTestSubmitCommand_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTest.h"
 #include "cmCTestHandlerCommand.h"
-#include "cmTypeMacro.h"
 
 #include <set>
 #include <string>
@@ -55,7 +54,7 @@ public:
    */
   std::string GetName() const CM_OVERRIDE { return "ctest_submit"; }
 
-  cmTypeMacro(cmCTestSubmitCommand, cmCTestHandlerCommand);
+  typedef cmCTestHandlerCommand Superclass;
 
 protected:
   cmCTestGenericHandler* InitializeHandler() CM_OVERRIDE;
@@ -71,6 +70,7 @@ protected:
     ArgumentDoingRetryCount,
     ArgumentDoingCDashUpload,
     ArgumentDoingCDashUploadType,
+    ArgumentDoingHttpHeader,
     ArgumentDoingLast2
   };
 
@@ -84,6 +84,7 @@ protected:
   bool CDashUpload;
   std::string CDashUploadFile;
   std::string CDashUploadType;
+  std::vector<std::string> HttpHeaders;
 };
 
 #endif

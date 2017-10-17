@@ -3,36 +3,30 @@
 #ifndef cmMakefile_h
 #define cmMakefile_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
+
+#include "cmsys/RegularExpression.hxx"
+#include <deque>
+#include <map>
+#include <set>
+#include <stack>
+#include <stddef.h>
+#include <string>
+#include <vector>
 
 #include "cmAlgorithms.h"
 #include "cmListFileCache.h"
 #include "cmNewLineStyle.h"
 #include "cmPolicies.h"
-#include "cmState.h"
+#include "cmStateSnapshot.h"
+#include "cmStateTypes.h"
 #include "cmTarget.h"
-#include "cmTargetLinkLibraryType.h"
+#include "cm_auto_ptr.hxx"
+#include "cm_unordered_map.hxx"
 #include "cmake.h"
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
 #include "cmSourceGroup.h"
-#endif
-
-#include <cm_auto_ptr.hxx>
-#include <cmsys/RegularExpression.hxx>
-
-#include <map>
-#include <set>
-#include <stack>
-#include <string>
-#include <vector>
-
-#if defined(CMAKE_BUILD_WITH_CMAKE)
-#ifdef CMake_HAVE_CXX_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <cmsys/hash_map.hxx>
-#endif
 #endif
 
 class cmCommand;
@@ -47,6 +41,7 @@ class cmGlobalGenerator;
 class cmInstallGenerator;
 class cmMessenger;
 class cmSourceFile;
+class cmState;
 class cmTest;
 class cmTestGenerator;
 class cmVariableWatch;
@@ -60,6 +55,8 @@ class cmVariableWatch;
  */
 class cmMakefile
 {
+  CM_DISABLE_COPY(cmMakefile)
+
 public:
   /* Mark a variable as used */
   void MarkVariableAsUsed(const std::string& var);
@@ -70,7 +67,7 @@ public:
    * Construct an empty makefile.
    */
   cmMakefile(cmGlobalGenerator* globalGenerator,
-             const cmState::Snapshot& snapshot);
+             const cmStateSnapshot& snapshot);
 
   /**
    * Destructor.
@@ -126,13 +123,22 @@ public:
    */
   void FinalPass();
 
+  /** How to handle custom commands for object libraries */
+  enum ObjectLibraryCommands
+  {
+    RejectObjectLibraryCommands,
+    AcceptObjectLibraryCommands
+  };
+
   /** Add a custom command to the build.  */
   void AddCustomCommandToTarget(
     const std::string& target, const std::vector<std::string>& byproducts,
     const std::vector<std::string>& depends,
     const cmCustomCommandLines& commandLines, cmTarget::CustomCommandType type,
     const char* comment, const char* workingDir, bool escapeOldStyle = true,
-    bool uses_terminal = false, const std::string& depfile = "");
+    bool uses_terminal = false, const std::string& depfile = "",
+    bool command_expand_lists = false,
+    ObjectLibraryCommands objLibraryCommands = RejectObjectLibraryCommands);
   cmSourceFile* AddCustomCommandToOutput(
     const std::vector<std::string>& outputs,
     const std::vector<std::string>& byproducts,
@@ -140,13 +146,15 @@ public:
     const std::string& main_dependency,
     const cmCustomCommandLines& commandLines, const char* comment,
     const char* workingDir, bool replace = false, bool escapeOldStyle = true,
-    bool uses_terminal = false, const std::string& depfile = "");
+    bool uses_terminal = false, bool command_expand_lists = false,
+    const std::string& depfile = "");
   cmSourceFile* AddCustomCommandToOutput(
     const std::string& output, const std::vector<std::string>& depends,
     const std::string& main_dependency,
     const cmCustomCommandLines& commandLines, const char* comment,
     const char* workingDir, bool replace = false, bool escapeOldStyle = true,
-    bool uses_terminal = false, const std::string& depfile = "");
+    bool uses_terminal = false, bool command_expand_lists = false,
+    const std::string& depfile = "");
   void AddCustomCommandOldStyle(const std::string& target,
                                 const std::vector<std::string>& outputs,
                                 const std::vector<std::string>& depends,
@@ -163,9 +171,10 @@ public:
 
   /** Create a new imported target with the name and type given.  */
   cmTarget* AddImportedTarget(const std::string& name,
-                              cmState::TargetType type, bool global);
+                              cmStateEnums::TargetType type, bool global);
 
-  cmTarget* AddNewTarget(cmState::TargetType type, const std::string& name);
+  cmTarget* AddNewTarget(cmStateEnums::TargetType type,
+                         const std::string& name);
 
   /**
    * Add an executable to the build.
@@ -188,22 +197,15 @@ public:
     const std::string& utilityName, bool excludeFromAll,
     const char* workingDirectory, const std::vector<std::string>& depends,
     const cmCustomCommandLines& commandLines, bool escapeOldStyle = true,
-    const char* comment = CM_NULLPTR, bool uses_terminal = false);
+    const char* comment = CM_NULLPTR, bool uses_terminal = false,
+    bool command_expand_lists = false);
   cmTarget* AddUtilityCommand(
     const std::string& utilityName, bool excludeFromAll,
     const char* workingDirectory, const std::vector<std::string>& byproducts,
     const std::vector<std::string>& depends,
     const cmCustomCommandLines& commandLines, bool escapeOldStyle = true,
-    const char* comment = CM_NULLPTR, bool uses_terminal = false);
-
-  /**
-   * Add a link library to the build.
-   */
-  void AddLinkLibrary(const std::string&);
-  void AddLinkLibrary(const std::string&, cmTargetLinkLibraryType type);
-  void AddLinkLibraryForTarget(const std::string& tgt, const std::string&,
-                               cmTargetLinkLibraryType type);
-  void AddLinkDirectoryForTarget(const std::string& tgt, const std::string& d);
+    const char* comment = CM_NULLPTR, bool uses_terminal = false,
+    bool command_expand_lists = false);
 
   /**
    * Add a subdirectory to the build.
@@ -232,7 +234,7 @@ public:
   void AddDefinition(const std::string& name, const char* value);
   ///! Add a definition to this makefile and the global cmake cache.
   void AddCacheDefinition(const std::string& name, const char* value,
-                          const char* doc, cmState::CacheEntryType type,
+                          const char* doc, cmStateEnums::CacheEntryType type,
                           bool force = false);
 
   /**
@@ -260,7 +262,8 @@ public:
   /**
    * Set the name of the library.
    */
-  cmTarget* AddLibrary(const std::string& libname, cmState::TargetType type,
+  cmTarget* AddLibrary(const std::string& libname,
+                       cmStateEnums::TargetType type,
                        const std::vector<std::string>& srcs,
                        bool excludeFromAll = false);
   void AddAlias(const std::string& libname, const std::string& tgt);
@@ -407,6 +410,8 @@ public:
   cmSourceFile* GetOrCreateSource(const std::string& sourceName,
                                   bool generated = false);
 
+  void AddTargetObject(std::string const& tgtName, std::string const& objFile);
+
   /**
    * Given a variable name, return its value (as a string).
    * If the variable is not found in this makefile instance, the
@@ -437,6 +442,8 @@ public:
 
   /** Return whether the target platform is 64-bit.  */
   bool PlatformIs64Bit() const;
+  /** Return whether the target platform is x32.  */
+  bool PlatformIsx32() const;
 
   /** Return whether the target platform is Apple iOS.  */
   bool PlatformIsAppleIos() const;
@@ -447,7 +454,7 @@ public:
   /**
    * Get a list of preprocessor define flags.
    */
-  const char* GetDefineFlags() const { return this->DefineFlags.c_str(); }
+  std::string GetDefineFlags() const { return this->DefineFlags; }
 
   /**
    * Make sure CMake can write this file
@@ -541,7 +548,7 @@ public:
    */
   int ConfigureFile(const char* infile, const char* outfile, bool copyonly,
                     bool atOnly, bool escapeQuotes,
-                    const cmNewLineStyle& = cmNewLineStyle());
+                    cmNewLineStyle = cmNewLineStyle());
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
   /**
@@ -705,6 +712,7 @@ public:
   /** Helper class to push and pop scopes automatically.  */
   class ScopePushPop
   {
+    CM_DISABLE_COPY(ScopePushPop)
   public:
     ScopePushPop(cmMakefile* m)
       : Makefile(m)
@@ -760,7 +768,7 @@ public:
   void ClearMatches();
   void StoreMatches(cmsys::RegularExpression& re);
 
-  cmState::Snapshot GetStateSnapshot() const;
+  cmStateSnapshot GetStateSnapshot() const;
 
   const char* GetDefineFlagsCMP0059() const;
 
@@ -779,9 +787,13 @@ public:
   void RemoveExportBuildFileGeneratorCMP0024(cmExportBuildFileGenerator* gen);
   void AddExportBuildFileGenerator(cmExportBuildFileGenerator* gen);
 
+  // Maintain a stack of pacakge names to determine the depth of find modules
+  // we are currently being called with
+  std::deque<std::string> FindPackageModuleStack;
+
 protected:
   // add link libraries and directories to the target
-  void AddGlobalLinkInformation(const std::string& name, cmTarget& target);
+  void AddGlobalLinkInformation(cmTarget& target);
 
   // Check for a an unused variable
   void LogUnused(const char* reason, const std::string& name) const;
@@ -790,23 +802,11 @@ protected:
 
   // libraries, classes, and executables
   mutable cmTargets Targets;
-#if defined(CMAKE_BUILD_WITH_CMAKE)
-#ifdef CMake_HAVE_CXX_UNORDERED_MAP
-  typedef std::unordered_map<std::string, cmTarget*> TargetMap;
-#else
-  typedef cmsys::hash_map<std::string, cmTarget*> TargetMap;
-#endif
-#else
-  typedef std::map<std::string, cmTarget*> TargetMap;
-#endif
   std::map<std::string, std::string> AliasTargets;
   std::vector<cmSourceFile*> SourceFiles;
 
   // Tests
   std::map<std::string, cmTest*> Tests;
-
-  // The link-library paths.  Order matters, use std::vector (not std::set).
-  std::vector<std::string> LinkDirectories;
 
   // The set of include directories that are marked as system include
   // directories.
@@ -814,8 +814,6 @@ protected:
 
   std::vector<std::string> ListFiles;
   std::vector<std::string> OutputFiles;
-
-  cmTarget::LinkLibraryVectorType LinkLibraries;
 
   std::vector<cmInstallGenerator*> InstallGenerators;
   std::vector<cmTestGenerator*> TestGenerators;
@@ -830,6 +828,7 @@ protected:
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
   std::vector<cmSourceGroup> SourceGroups;
+  size_t ObjectLibrariesSourceGroupIndex;
 #endif
 
   std::vector<cmCommand*> FinalPassCommands;
@@ -838,10 +837,7 @@ protected:
                          cmExecutionStatus& status);
 
 private:
-  cmMakefile(const cmMakefile& mf);
-  cmMakefile& operator=(const cmMakefile& mf);
-
-  cmState::Snapshot StateSnapshot;
+  cmStateSnapshot StateSnapshot;
   cmListFileBacktrace Backtrace;
 
   void ReadListFile(cmListFile const& listFile,
@@ -875,6 +871,7 @@ private:
   friend class cmParseFileScope;
 
   std::vector<cmTarget*> ImportedTargetsOwned;
+  typedef CM_UNORDERED_MAP<std::string, cmTarget*> TargetMap;
   TargetMap ImportedTargets;
 
   // Internal policy stack management.
@@ -911,16 +908,8 @@ private:
    */
   cmSourceFile* LinearGetSourceFileWithOutput(const std::string& cname) const;
 
-// A map for fast output to input look up.
-#if defined(CMAKE_BUILD_WITH_CMAKE)
-#ifdef CMake_HAVE_CXX_UNORDERED_MAP
-  typedef std::unordered_map<std::string, cmSourceFile*> OutputToSourceMap;
-#else
-  typedef cmsys::hash_map<std::string, cmSourceFile*> OutputToSourceMap;
-#endif
-#else
-  typedef std::map<std::string, cmSourceFile*> OutputToSourceMap;
-#endif
+  // A map for fast output to input look up.
+  typedef CM_UNORDERED_MAP<std::string, cmSourceFile*> OutputToSourceMap;
   OutputToSourceMap OutputToSource;
 
   void UpdateOutputToSourceMap(std::vector<std::string> const& outputs,
@@ -940,7 +929,8 @@ private:
   void CheckNeededCLanguage(const std::string& feature, bool& needC90,
                             bool& needC99, bool& needC11) const;
   void CheckNeededCxxLanguage(const std::string& feature, bool& needCxx98,
-                              bool& needCxx11, bool& needCxx14) const;
+                              bool& needCxx11, bool& needCxx14,
+                              bool& needCxx17) const;
 
   bool HaveCStandardAvailable(cmTarget const* target,
                               const std::string& feature) const;

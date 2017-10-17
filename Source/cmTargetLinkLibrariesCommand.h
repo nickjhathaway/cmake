@@ -3,7 +3,16 @@
 #ifndef cmTargetLinkLibrariesCommand_h
 #define cmTargetLinkLibrariesCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+#include "cmTargetLinkLibraryType.h"
+
+class cmExecutionStatus;
+class cmTarget;
 
 /** \class cmTargetLinkLibrariesCommand
  * \brief Specify a list of libraries to link into executables.
@@ -26,13 +35,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "target_link_libraries"; }
-
-  cmTypeMacro(cmTargetLinkLibrariesCommand, cmCommand);
 
 private:
   void LinkLibraryTypeSpecifierWarning(int left, int right);

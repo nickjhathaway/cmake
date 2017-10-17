@@ -1,6 +1,20 @@
 /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
    file Copyright.txt or https://cmake.org/licensing for details.  */
-#include <cmConfigure.h>
+#include "cmConfigure.h"
+
+#include "cmsys/CommandLineArguments.hxx"
+#include "cmsys/Encoding.hxx"
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <stddef.h>
+#include <string>
+#include <utility>
+#include <vector>
+
+#if defined(_WIN32) && defined(CMAKE_BUILD_WITH_CMAKE)
+#include "cmsys/ConsoleBuf.hxx"
+#endif
 
 #include "cmCPackGenerator.h"
 #include "cmCPackGeneratorFactory.h"
@@ -9,21 +23,10 @@
 #include "cmDocumentationEntry.h"
 #include "cmGlobalGenerator.h"
 #include "cmMakefile.h"
-#include "cmState.h"
+#include "cmStateSnapshot.h"
 #include "cmSystemTools.h"
-#include "cmTypeMacro.h"
 #include "cm_auto_ptr.hxx"
 #include "cmake.h"
-
-#include <cmsys/CommandLineArguments.hxx>
-#include <cmsys/Encoding.hxx>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <stddef.h>
-#include <string>
-#include <utility>
-#include <vector>
 
 static const char* cmDocumentationName[][2] = {
   { CM_NULLPTR, "  cpack - Packaging driver provided by CMake." },
@@ -84,6 +87,13 @@ int cpackDefinitionArgument(const char* argument, const char* cValue,
 // this is CPack.
 int main(int argc, char const* const* argv)
 {
+#if defined(_WIN32) && defined(CMAKE_BUILD_WITH_CMAKE)
+  // Replace streambuf so we can output Unicode to console
+  cmsys::ConsoleBuf::Manager consoleOut(std::cout);
+  consoleOut.SetUTF8Pipes();
+  cmsys::ConsoleBuf::Manager consoleErr(std::cerr, true);
+  consoleErr.SetUTF8Pipes();
+#endif
   cmsys::Encoding::CommandLineArguments args =
     cmsys::Encoding::CommandLineArguments::Main(argc, argv);
   argc = args.argc();
@@ -178,11 +188,10 @@ int main(int argc, char const* const* argv)
   cmCPack_Log(&log, cmCPackLog::LOG_VERBOSE,
               "Read CPack config file: " << cpackConfigFile << std::endl);
 
-  cmake cminst;
+  cmake cminst(cmake::RoleScript);
   cminst.SetHomeDirectory("");
   cminst.SetHomeOutputDirectory("");
   cminst.GetCurrentSnapshot().SetDefaultDefinitions();
-  cminst.GetState()->RemoveUnscriptableCommands();
   cmGlobalGenerator cmgg(&cminst);
   CM_AUTO_PTR<cmMakefile> globalMF(
     new cmMakefile(&cmgg, cminst.GetCurrentSnapshot()));
@@ -415,9 +424,7 @@ int main(int argc, char const* const* argv)
     }
     doc.SetSection("Generators", v);
 
-#undef cout
     return doc.PrintRequestedDocumentation(std::cout) ? 0 : 1;
-#define cout no_cout_use_cmCPack_Log
   }
 
   if (cmSystemTools::GetErrorOccuredFlag()) {

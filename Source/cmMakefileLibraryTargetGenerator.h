@@ -3,7 +3,7 @@
 #ifndef cmMakefileLibraryTargetGenerator_h
 #define cmMakefileLibraryTargetGenerator_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmMakefileTargetGenerator.h"
 
@@ -26,6 +26,9 @@ protected:
   void WriteStaticLibraryRules();
   void WriteSharedLibraryRules(bool relink);
   void WriteModuleLibraryRules(bool relink);
+
+  void WriteDeviceLibraryRules(const std::string& linkRule,
+                               const std::string& extraFlags, bool relink);
   void WriteLibraryRules(const std::string& linkRule,
                          const std::string& extraFlags, bool relink);
   // MacOSX Framework support methods
@@ -33,6 +36,9 @@ protected:
 
   // Store the computd framework version for OS X Frameworks.
   std::string FrameworkVersion;
+
+private:
+  std::string DeviceLinkObject;
 };
 
 #endif
