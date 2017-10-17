@@ -2,8 +2,7 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmCommonTargetGenerator.h"
 
-#include <algorithm>
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 #include <set>
 #include <sstream>
 #include <utility>
@@ -12,11 +11,13 @@
 #include "cmComputeLinkInformation.h"
 #include "cmGeneratorTarget.h"
 #include "cmGlobalCommonGenerator.h"
+#include "cmLinkLineComputer.h"
 #include "cmLocalCommonGenerator.h"
 #include "cmLocalGenerator.h"
 #include "cmMakefile.h"
+#include "cmOutputConverter.h"
 #include "cmSourceFile.h"
-#include "cmState.h"
+#include "cmStateTypes.h"
 
 cmCommonTargetGenerator::cmCommonTargetGenerator(cmGeneratorTarget* gt)
   : GeneratorTarget(gt)
@@ -25,7 +26,6 @@ cmCommonTargetGenerator::cmCommonTargetGenerator(cmGeneratorTarget* gt)
   , GlobalGenerator(static_cast<cmGlobalCommonGenerator*>(
       gt->LocalGenerator->GetGlobalGenerator()))
   , ConfigName(LocalGenerator->GetConfigName())
-  , ModuleDefinitionFile(GeneratorTarget->GetModuleDefinitionFile(ConfigName))
 {
 }
 
@@ -43,25 +43,12 @@ const char* cmCommonTargetGenerator::GetFeature(const std::string& feature)
   return this->GeneratorTarget->GetFeature(feature, this->ConfigName);
 }
 
-bool cmCommonTargetGenerator::GetFeatureAsBool(const std::string& feature)
+void cmCommonTargetGenerator::AddModuleDefinitionFlag(
+  cmLinkLineComputer* linkLineComputer, std::string& flags)
 {
-  return this->GeneratorTarget->GetFeatureAsBool(feature, this->ConfigName);
-}
-
-void cmCommonTargetGenerator::AddFeatureFlags(std::string& flags,
-                                              const std::string& lang)
-{
-  // Add language-specific flags.
-  this->LocalGenerator->AddLanguageFlags(flags, lang, this->ConfigName);
-
-  if (this->GetFeatureAsBool("INTERPROCEDURAL_OPTIMIZATION")) {
-    this->LocalGenerator->AppendFeatureOptions(flags, lang, "IPO");
-  }
-}
-
-void cmCommonTargetGenerator::AddModuleDefinitionFlag(std::string& flags)
-{
-  if (!this->ModuleDefinitionFile) {
+  cmGeneratorTarget::ModuleDefinitionInfo const* mdi =
+    this->GeneratorTarget->GetModuleDefinitionInfo(this->GetConfigName());
+  if (!mdi || mdi->DefFile.empty()) {
     return;
   }
 
@@ -75,8 +62,9 @@ void cmCommonTargetGenerator::AddModuleDefinitionFlag(std::string& flags)
   // Append the flag and value.  Use ConvertToLinkReference to help
   // vs6's "cl -link" pass it to the linker.
   std::string flag = defFileFlag;
-  flag += (this->LocalGenerator->ConvertToLinkReference(
-    this->ModuleDefinitionFile->GetFullPath()));
+  flag += this->LocalGenerator->ConvertToOutputFormat(
+    linkLineComputer->ConvertToLinkReference(mdi->DefFile),
+    cmOutputConverter::SHELL);
   this->LocalGenerator->AppendFlags(flags, flag);
 }
 
@@ -167,7 +155,7 @@ std::vector<std::string> cmCommonTargetGenerator::GetLinkedTargetDirectories()
           // We can ignore the INTERFACE_LIBRARY items because
           // Target->GetLinkInformation already processed their
           // link interface and they don't have any output themselves.
-          && linkee->GetType() != cmState::INTERFACE_LIBRARY &&
+          && linkee->GetType() != cmStateEnums::INTERFACE_LIBRARY &&
           emitted.insert(linkee).second) {
         cmLocalGenerator* lg = linkee->GetLocalGenerator();
         std::string di = lg->GetCurrentBinaryDirectory();
@@ -178,6 +166,28 @@ std::vector<std::string> cmCommonTargetGenerator::GetLinkedTargetDirectories()
     }
   }
   return dirs;
+}
+
+std::string cmCommonTargetGenerator::ComputeTargetCompilePDB() const
+{
+  std::string compilePdbPath;
+  if (this->GeneratorTarget->GetType() > cmStateEnums::OBJECT_LIBRARY) {
+    return compilePdbPath;
+  }
+  compilePdbPath =
+    this->GeneratorTarget->GetCompilePDBPath(this->GetConfigName());
+  if (compilePdbPath.empty()) {
+    // Match VS default: `$(IntDir)vc$(PlatformToolsetVersion).pdb`.
+    // A trailing slash tells the toolchain to add its default file name.
+    compilePdbPath = this->GeneratorTarget->GetSupportDirectory() + "/";
+    if (this->GeneratorTarget->GetType() == cmStateEnums::STATIC_LIBRARY) {
+      // Match VS default for static libs: `$(IntDir)$(ProjectName).pdb`.
+      compilePdbPath += this->GeneratorTarget->GetName();
+      compilePdbPath += ".pdb";
+    }
+  }
+
+  return compilePdbPath;
 }
 
 std::string cmCommonTargetGenerator::GetManifests()

@@ -3,7 +3,7 @@
 #ifndef cmLocalUnixMakefileGenerator3_h
 #define cmLocalUnixMakefileGenerator3_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmDepends.h"
 #include "cmLocalCommonGenerator.h"
@@ -183,6 +183,9 @@ public:
   // preprocessed files and assembly files. Currently only used by the
   // Eclipse generator.
   void GetIndividualFileTargets(std::vector<std::string>& targets);
+
+  std::string MaybeConvertToRelativePath(std::string const& base,
+                                         std::string const& path);
 
 protected:
   void WriteLocalMakefile();

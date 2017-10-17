@@ -3,7 +3,14 @@
 #ifndef cmSourceGroupCommand_h
 #define cmSourceGroupCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmSourceGroupCommand
  * \brief Adds a cmSourceGroup to the cmMakefile.
@@ -26,12 +33,11 @@ public:
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
 
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "source_group"; }
-
-  cmTypeMacro(cmSourceGroupCommand, cmCommand);
+private:
+  bool processTree(const std::vector<std::string>& args,
+                   std::string& errorMsg);
+  bool checkTreeArgumentsPreconditions(const std::vector<std::string>& args,
+                                       std::string& errorMsg) const;
 };
 
 #endif

@@ -2,9 +2,10 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmXCodeObject.h"
 
-#include "cmSystemTools.h"
+#include <CoreFoundation/CoreFoundation.h>
+#include <ostream>
 
-#include <CoreFoundation/CoreFoundation.h> // CFUUIDCreate
+#include "cmSystemTools.h"
 
 const char* cmXCodeObject::PBXTypeNames[] = {
   /* clang-format needs this comment to break after the opening brace */
@@ -223,11 +224,11 @@ void cmXCodeObject::PrintString(std::ostream& os, std::string String)
 {
   // The string needs to be quoted if it contains any characters
   // considered special by the Xcode project file parser.
-  bool needQuote = (String.empty() || String.find("//") != String.npos ||
+  bool needQuote = (String.empty() || String.find("//") != std::string::npos ||
                     String.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                              "abcdefghijklmnopqrstuvwxyz"
                                              "0123456789"
-                                             "$_./") != String.npos);
+                                             "$_./") != std::string::npos);
   const char* quote = needQuote ? "\"" : "";
 
   // Print the string, quoted and escaped as necessary.

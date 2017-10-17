@@ -3,7 +3,15 @@
 #ifndef cmSetTargetsPropertiesCommand_h
 #define cmSetTargetsPropertiesCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
+class cmMakefile;
 
 class cmSetTargetPropertiesCommand : public cmCommand
 {
@@ -18,18 +26,11 @@ public:
                    cmExecutionStatus& status) CM_OVERRIDE;
 
   /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "set_target_properties"; }
-
-  /**
    *  Used by this command and cmSetPropertiesCommand
    */
   static bool SetOneTarget(const std::string& tname,
                            std::vector<std::string>& propertyPairs,
                            cmMakefile* mf);
-
-  cmTypeMacro(cmSetTargetPropertiesCommand, cmCommand);
 };
 
 #endif

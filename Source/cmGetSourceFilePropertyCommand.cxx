@@ -2,7 +2,10 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmGetSourceFilePropertyCommand.h"
 
+#include "cmMakefile.h"
 #include "cmSourceFile.h"
+
+class cmExecutionStatus;
 
 // cmSetSourceFilePropertyCommand
 bool cmGetSourceFilePropertyCommand::InitialPass(
@@ -12,8 +15,8 @@ bool cmGetSourceFilePropertyCommand::InitialPass(
     this->SetError("called with incorrect number of arguments");
     return false;
   }
-  const char* var = args[0].c_str();
-  const char* file = args[1].c_str();
+  std::string const& var = args[0];
+  std::string const& file = args[1];
   cmSourceFile* sf = this->Makefile->GetSource(file);
 
   // for the location we must create a source file first

@@ -3,10 +3,9 @@
 #ifndef cmCTestStartCommand_h
 #define cmCTestStartCommand_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTestCommand.h"
-#include "cmTypeMacro.h"
 
 #include <iosfwd>
 #include <string>
@@ -54,13 +53,6 @@ public:
    * Should this invocation of ctest_start output non-error messages?
    */
   bool ShouldBeQuiet() { return this->Quiet; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "ctest_start"; }
-
-  cmTypeMacro(cmCTestStartCommand, cmCTestCommand);
 
 private:
   bool InitialCheckout(std::ostream& ofs, std::string const& sourceDir);

@@ -3,12 +3,14 @@
 #ifndef cmStringCommand_h
 #define cmStringCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
 
-class cmMakefile;
-namespace cmsys {
-class RegularExpression;
-}
+class cmExecutionStatus;
 
 /** \class cmStringCommand
  * \brief Common string operations
@@ -28,18 +30,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "string"; }
-
-  cmTypeMacro(cmStringCommand, cmCommand);
 
 protected:
   bool HandleConfigureCommand(std::vector<std::string> const& args);

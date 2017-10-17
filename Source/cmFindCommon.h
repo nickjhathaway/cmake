@@ -3,6 +3,13 @@
 #ifndef cmFindCommon_h
 #define cmFindCommon_h
 
+#include "cmConfigure.h"
+
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
 #include "cmPathLabel.h"
 #include "cmSearchPath.h"
@@ -19,7 +26,6 @@ class cmFindCommon : public cmCommand
 public:
   cmFindCommon();
   ~cmFindCommon() CM_OVERRIDE;
-  cmTypeMacro(cmFindCommon, cmCommand);
 
 protected:
   friend class cmSearchPath;
@@ -49,6 +55,7 @@ protected:
       : cmPathLabel(label)
     {
     }
+    static PathLabel PackageRoot;
     static PathLabel CMake;
     static PathLabel CMakeEnvironment;
     static PathLabel Hints;
@@ -74,13 +81,11 @@ protected:
   void GetIgnoredPaths(std::vector<std::string>& ignore);
   void GetIgnoredPaths(std::set<std::string>& ignore);
 
-  /** Remove paths in the ignore set from the supplied vector.  */
-  void FilterPaths(const std::vector<std::string>& inPaths,
-                   const std::set<std::string>& ignore,
-                   std::vector<std::string>& outPaths);
-
   /** Compute final search path list (reroot + trailing slash).  */
   void ComputeFinalPaths();
+
+  /** Decide whether to enable the PACKAGE_ROOT search entries.  */
+  void SelectDefaultNoPackageRootPath();
 
   /** Compute the current default root path mode.  */
   void SelectDefaultRootPathMode();
@@ -97,9 +102,9 @@ protected:
 
   bool CheckCommonArgument(std::string const& arg);
   void AddPathSuffix(std::string const& arg);
-  void SetMakefile(cmMakefile* makefile);
 
   bool NoDefaultPath;
+  bool NoPackageRootPath;
   bool NoCMakePath;
   bool NoCMakeEnvironmentPath;
   bool NoSystemEnvironmentPath;

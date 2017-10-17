@@ -168,6 +168,7 @@ struct HTTP {
   const uint8_t *pausedata; /* pointer to data received in on_data_chunk */
   size_t pauselen; /* the number of bytes left in data */
   bool closed; /* TRUE on HTTP2 stream close */
+  bool close_handled; /* TRUE if stream closure is handled by libcurl */
   uint32_t error_code; /* HTTP/2 error code */
 
   char *mem;     /* points to a buffer in memory to store received data */
@@ -218,6 +219,10 @@ struct http_conn {
 
   /* this is a hash of all individual streams (Curl_easy structs) */
   struct h2settings settings;
+
+  /* list of settings that will be sent */
+  nghttp2_settings_entry local_settings[3];
+  size_t local_settings_num;
 #else
   int unused; /* prevent a compiler warning */
 #endif

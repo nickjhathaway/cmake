@@ -3,7 +3,19 @@
 #ifndef cmSetsPropertiesCommand_h
 #define cmSetsPropertiesCommand_h
 
+#include "cmConfigure.h"
+
+#include <set>
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
+class cmInstalledFile;
+class cmSourceFile;
+class cmTarget;
+class cmTest;
 
 class cmSetPropertyCommand : public cmCommand
 {
@@ -18,18 +30,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "set_property"; }
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  cmTypeMacro(cmSetPropertyCommand, cmCommand);
 
 private:
   std::set<std::string> Names;

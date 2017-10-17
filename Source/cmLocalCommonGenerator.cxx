@@ -2,10 +2,11 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmLocalCommonGenerator.h"
 
+#include <vector>
+
 #include "cmGeneratorTarget.h"
 #include "cmMakefile.h"
-
-#include <vector>
+#include "cmOutputConverter.h"
 
 class cmGlobalGenerator;
 
@@ -15,14 +16,6 @@ cmLocalCommonGenerator::cmLocalCommonGenerator(cmGlobalGenerator* gg,
   : cmLocalGenerator(gg, mf)
   , WorkingDirectory(wd)
 {
-}
-
-cmLocalCommonGenerator::~cmLocalCommonGenerator()
-{
-}
-
-void cmLocalCommonGenerator::SetConfigName()
-{
   // Store the configuration name that will be generated.
   if (const char* config = this->Makefile->GetDefinition("CMAKE_BUILD_TYPE")) {
     // Use the build type given by the user.
@@ -31,6 +24,10 @@ void cmLocalCommonGenerator::SetConfigName()
     // No configuration type given.
     this->ConfigName = "";
   }
+}
+
+cmLocalCommonGenerator::~cmLocalCommonGenerator()
+{
 }
 
 std::string cmLocalCommonGenerator::GetTargetFortranFlags(

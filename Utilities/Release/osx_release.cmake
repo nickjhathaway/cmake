@@ -4,7 +4,7 @@ set(BOOTSTRAP_ARGS "--prefix=/ --docdir=doc/cmake")
 set(HOST dragnipur)
 set(MAKE_PROGRAM "make")
 set(MAKE "${MAKE_PROGRAM} -j5")
-set(CPACK_BINARY_GENERATORS "DragNDrop TGZ TZ")
+set(CPACK_BINARY_GENERATORS "DragNDrop TGZ")
 set(CPACK_SOURCE_GENERATORS "TGZ TZ")
 set(CPACK_DMG_FORMAT "UDBZ") #build using bzip2 for smaller package size
 set(CC clang)
@@ -27,7 +27,7 @@ CMAKE_SKIP_RPATH:BOOL=TRUE
 CMake_TEST_NO_FindPackageModeMakefileTest:BOOL=TRUE
 ")
 set(ENV [[
-export CMAKE_PREFIX_PATH='/Users/kitware/SDKs/qt-5.6.0-clang-x64'
+export CMAKE_PREFIX_PATH='/Users/kitware/SDKs/qt-5.6.2-clang-x64'
 ]])
 get_filename_component(path "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(${path}/release_cmake.cmake)

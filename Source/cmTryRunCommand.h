@@ -3,7 +3,15 @@
 #ifndef cmTryRunCommand_h
 #define cmTryRunCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCoreTryCompile.h"
+
+class cmCommand;
+class cmExecutionStatus;
 
 /** \class cmTryRunCommand
  * \brief Specifies where to install some files
@@ -24,13 +32,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "try_run"; }
-
-  cmTypeMacro(cmTryRunCommand, cmCoreTryCompile);
 
 private:
   void RunExecutable(const std::string& runArgs,

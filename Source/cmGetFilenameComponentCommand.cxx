@@ -2,7 +2,11 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmGetFilenameComponentCommand.h"
 
+#include "cmMakefile.h"
+#include "cmStateTypes.h"
 #include "cmSystemTools.h"
+
+class cmExecutionStatus;
 
 // cmGetFilenameComponentCommand
 bool cmGetFilenameComponentCommand::InitialPass(
@@ -24,7 +28,7 @@ bool cmGetFilenameComponentCommand::InitialPass(
 
   std::string result;
   std::string filename = args[1];
-  if (filename.find("[HKEY") != filename.npos) {
+  if (filename.find("[HKEY") != std::string::npos) {
     // Check the registry as the target application would view it.
     cmSystemTools::KeyWOW64 view = cmSystemTools::KeyWOW64_32;
     cmSystemTools::KeyWOW64 other_view = cmSystemTools::KeyWOW64_64;
@@ -33,10 +37,10 @@ bool cmGetFilenameComponentCommand::InitialPass(
       other_view = cmSystemTools::KeyWOW64_32;
     }
     cmSystemTools::ExpandRegistryValues(filename, view);
-    if (filename.find("/registry") != filename.npos) {
+    if (filename.find("/registry") != std::string::npos) {
       std::string other = args[1];
       cmSystemTools::ExpandRegistryValues(other, other_view);
-      if (other.find("/registry") == other.npos) {
+      if (other.find("/registry") == std::string::npos) {
         filename = other;
       }
     }
@@ -88,13 +92,13 @@ bool cmGetFilenameComponentCommand::InitialPass(
 
   if (args.size() >= 4 && args[args.size() - 1] == "CACHE") {
     if (!programArgs.empty() && !storeArgs.empty()) {
-      this->Makefile->AddCacheDefinition(storeArgs, programArgs.c_str(), "",
-                                         args[2] == "PATH" ? cmState::FILEPATH
-                                                           : cmState::STRING);
+      this->Makefile->AddCacheDefinition(
+        storeArgs, programArgs.c_str(), "",
+        args[2] == "PATH" ? cmStateEnums::FILEPATH : cmStateEnums::STRING);
     }
-    this->Makefile->AddCacheDefinition(args[0], result.c_str(), "",
-                                       args[2] == "PATH" ? cmState::FILEPATH
-                                                         : cmState::STRING);
+    this->Makefile->AddCacheDefinition(
+      args[0], result.c_str(), "",
+      args[2] == "PATH" ? cmStateEnums::FILEPATH : cmStateEnums::STRING);
   } else {
     if (!programArgs.empty() && !storeArgs.empty()) {
       this->Makefile->AddDefinition(storeArgs, programArgs.c_str());

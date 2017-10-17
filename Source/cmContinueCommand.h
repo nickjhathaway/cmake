@@ -3,7 +3,14 @@
 #ifndef cmContinueCommand_h
 #define cmContinueCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmContinueCommand
  * \brief Continue from an enclosing foreach or while loop
@@ -24,18 +31,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "continue"; }
-
-  cmTypeMacro(cmContinueCommand, cmCommand);
 };
 
 #endif

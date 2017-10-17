@@ -3,7 +3,15 @@
 #ifndef cmExecProgramCommand_h
 #define cmExecProgramCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+#include "cmProcessOutput.h"
+
+class cmExecutionStatus;
 
 /** \class cmExecProgramCommand
  * \brief Command that adds a target to the build system.
@@ -15,6 +23,7 @@
 class cmExecProgramCommand : public cmCommand
 {
 public:
+  typedef cmProcessOutput::Encoding Encoding;
   /**
    * This is a virtual constructor for the command.
    */
@@ -27,22 +36,11 @@ public:
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
 
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "exec_program"; }
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  cmTypeMacro(cmExecProgramCommand, cmCommand);
-
 private:
   static bool RunCommand(const char* command, std::string& output, int& retVal,
                          const char* directory = CM_NULLPTR,
-                         bool verbose = true);
+                         bool verbose = true,
+                         Encoding encoding = cmProcessOutput::Auto);
 };
 
 #endif

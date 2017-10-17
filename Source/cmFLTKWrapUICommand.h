@@ -3,7 +3,15 @@
 #ifndef cmFLTKWrapUICommand_h
 #define cmFLTKWrapUICommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
+class cmSourceFile;
 
 /** \class cmFLTKWrapUICommand
  * \brief Create .h and .cxx files rules for FLTK user interfaces files
@@ -14,8 +22,6 @@
 class cmFLTKWrapUICommand : public cmCommand
 {
 public:
-  cmTypeMacro(cmFLTKWrapUICommand, cmCommand);
-
   /**
    * This is a virtual constructor for the command.
    */
@@ -36,11 +42,6 @@ public:
    */
   void FinalPass() CM_OVERRIDE;
   bool HasFinalPass() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "fltk_wrap_ui"; }
 
 private:
   /**

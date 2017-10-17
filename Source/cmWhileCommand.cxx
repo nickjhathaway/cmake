@@ -3,6 +3,12 @@
 #include "cmWhileCommand.h"
 
 #include "cmConditionEvaluator.h"
+#include "cmExecutionStatus.h"
+#include "cmExpandedCommandArgument.h"
+#include "cmMakefile.h"
+#include "cmSystemTools.h"
+#include "cm_auto_ptr.hxx"
+#include "cmake.h"
 
 cmWhileFunctionBlocker::cmWhileFunctionBlocker(cmMakefile* mf)
   : Makefile(mf)
@@ -76,7 +82,7 @@ bool cmWhileFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
           cmExecutionStatus status;
           mf.ExecuteCommand(this->Functions[c], status);
           if (status.GetReturnInvoked()) {
-            inStatus.SetReturnInvoked(true);
+            inStatus.SetReturnInvoked();
             return true;
           }
           if (status.GetBreakInvoked()) {

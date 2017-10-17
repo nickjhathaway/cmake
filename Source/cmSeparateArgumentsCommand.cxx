@@ -2,6 +2,14 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmSeparateArgumentsCommand.h"
 
+#include <algorithm>
+#include <sstream>
+
+#include "cmMakefile.h"
+#include "cmSystemTools.h"
+
+class cmExecutionStatus;
+
 // cmSeparateArgumentsCommand
 bool cmSeparateArgumentsCommand::InitialPass(
   std::vector<std::string> const& args, cmExecutionStatus&)
@@ -32,6 +40,13 @@ bool cmSeparateArgumentsCommand::InitialPass(
     if (doing == DoingVariable) {
       var = args[i];
       doing = DoingMode;
+    } else if (doing == DoingMode && args[i] == "NATIVE_COMMAND") {
+#ifdef _WIN32
+      mode = ModeWindows;
+#else
+      mode = ModeUnix;
+#endif
+      doing = DoingCommand;
     } else if (doing == DoingMode && args[i] == "UNIX_COMMAND") {
       mode = ModeUnix;
       doing = DoingCommand;

@@ -3,10 +3,9 @@
 #ifndef cmCPackNSISGenerator_h
 #define cmCPackNSISGenerator_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCPackGenerator.h"
-#include "cmTypeMacro.h"
 
 #include <iosfwd>
 #include <set>

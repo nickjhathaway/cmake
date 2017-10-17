@@ -2,6 +2,11 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmRemoveCommand.h"
 
+#include "cmMakefile.h"
+#include "cmSystemTools.h"
+
+class cmExecutionStatus;
+
 // cmRemoveCommand
 bool cmRemoveCommand::InitialPass(std::vector<std::string> const& args,
                                   cmExecutionStatus&)
@@ -10,7 +15,7 @@ bool cmRemoveCommand::InitialPass(std::vector<std::string> const& args,
     return true;
   }
 
-  const char* variable = args[0].c_str(); // VAR is always first
+  std::string const& variable = args[0]; // VAR is always first
   // get the old value
   const char* cacheValue = this->Makefile->GetDefinition(variable);
 

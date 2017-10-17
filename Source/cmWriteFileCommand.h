@@ -3,7 +3,14 @@
 #ifndef cmWriteFileCommand_h
 #define cmWriteFileCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmWriteFileCommand
  * \brief Writes a message to a file
@@ -23,18 +30,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "write_file"; }
-
-  cmTypeMacro(cmWriteFileCommand, cmCommand);
 };
 
 #endif

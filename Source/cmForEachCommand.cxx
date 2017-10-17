@@ -2,7 +2,15 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmForEachCommand.h"
 
-#include <cm_auto_ptr.hxx>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "cmExecutionStatus.h"
+#include "cmMakefile.h"
+#include "cmSystemTools.h"
+#include "cm_auto_ptr.hxx"
+#include "cmake.h"
 
 cmForEachFunctionBlocker::cmForEachFunctionBlocker(cmMakefile* mf)
   : Makefile(mf)
@@ -50,7 +58,7 @@ bool cmForEachFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
           status.Clear();
           mf.ExecuteCommand(this->Functions[c], status);
           if (status.GetReturnInvoked()) {
-            inStatus.SetReturnInvoked(true);
+            inStatus.SetReturnInvoked();
             // restore the variable to its prior value
             mf.AddDefinition(this->Args[0], oldDef.c_str());
             return true;

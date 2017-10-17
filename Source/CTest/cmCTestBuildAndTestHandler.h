@@ -3,10 +3,9 @@
 #ifndef cmCTestBuildAndTestHandler_h
 #define cmCTestBuildAndTestHandler_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTestGenericHandler.h"
-#include "cmTypeMacro.h"
 
 #include <sstream>
 #include <stddef.h>
@@ -22,7 +21,7 @@ class cmake;
 class cmCTestBuildAndTestHandler : public cmCTestGenericHandler
 {
 public:
-  cmTypeMacro(cmCTestBuildAndTestHandler, cmCTestGenericHandler);
+  typedef cmCTestGenericHandler Superclass;
 
   /*
    * The main entry point for this class
@@ -47,7 +46,7 @@ protected:
   ///! Run CMake and build a test and then run it as a single test.
   int RunCMakeAndTest(std::string* output);
   int RunCMake(std::string* outstring, std::ostringstream& out,
-               std::string& cmakeOutString, std::string& cwd, cmake* cm);
+               std::string& cmakeOutString, cmake* cm);
 
   std::string Output;
 

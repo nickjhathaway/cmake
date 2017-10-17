@@ -3,7 +3,15 @@
 #ifndef cmFindLibraryCommand_h
 #define cmFindLibraryCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmFindBase.h"
+
+class cmCommand;
+class cmExecutionStatus;
 
 /** \class cmFindLibraryCommand
  * \brief Define a command to search for a library.
@@ -27,18 +35,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "find_library"; }
-
-  cmTypeMacro(cmFindLibraryCommand, cmFindBase);
 
 protected:
   void AddArchitecturePaths(const char* suffix);

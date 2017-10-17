@@ -3,12 +3,11 @@
 #ifndef cmCTestCoverageHandler_h
 #define cmCTestCoverageHandler_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
 #include "cmCTestGenericHandler.h"
-#include "cmTypeMacro.h"
 
-#include <cmsys/RegularExpression.hxx>
+#include "cmsys/RegularExpression.hxx"
 #include <iosfwd>
 #include <map>
 #include <set>
@@ -38,7 +37,7 @@ public:
 class cmCTestCoverageHandler : public cmCTestGenericHandler
 {
 public:
-  cmTypeMacro(cmCTestCoverageHandler, cmCTestGenericHandler);
+  typedef cmCTestGenericHandler Superclass;
 
   /*
    * The main entry point for this class

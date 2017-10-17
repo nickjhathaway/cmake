@@ -3,7 +3,9 @@
 #ifndef cmMakefileExecutableTargetGenerator_h
 #define cmMakefileExecutableTargetGenerator_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
+
+#include <string>
 
 #include "cmMakefileTargetGenerator.h"
 
@@ -21,6 +23,10 @@ public:
 
 protected:
   virtual void WriteExecutableRule(bool relink);
+  virtual void WriteDeviceExecutableRule(bool relink);
+
+private:
+  std::string DeviceLinkObject;
 };
 
 #endif

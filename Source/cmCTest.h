@@ -3,9 +3,10 @@
 #ifndef cmCTest_h
 #define cmCTest_h
 
-#include <cmConfigure.h>
+#include "cmConfigure.h"
 
-#include <cmsys/String.hxx>
+#include "cmProcessOutput.h"
+#include "cmsys/String.hxx"
 #include <map>
 #include <set>
 #include <sstream>
@@ -18,22 +19,6 @@ class cmCTestStartCommand;
 class cmGeneratedFileStream;
 class cmMakefile;
 class cmXMLWriter;
-
-#define cmCTestLog(ctSelf, logType, msg)                                      \
-  do {                                                                        \
-    std::ostringstream cmCTestLog_msg;                                        \
-    cmCTestLog_msg << msg;                                                    \
-    (ctSelf)->Log(cmCTest::logType, __FILE__, __LINE__,                       \
-                  cmCTestLog_msg.str().c_str());                              \
-  } while (0)
-
-#define cmCTestOptionalLog(ctSelf, logType, msg, suppress)                    \
-  do {                                                                        \
-    std::ostringstream cmCTestLog_msg;                                        \
-    cmCTestLog_msg << msg;                                                    \
-    (ctSelf)->Log(cmCTest::logType, __FILE__, __LINE__,                       \
-                  cmCTestLog_msg.str().c_str(), suppress);                    \
-  } while (0)
 
 /** \class cmCTest
  * \brief Represents a ctest invocation.
@@ -48,6 +33,7 @@ class cmCTest
   friend class cmCTestMultiProcessHandler;
 
 public:
+  typedef cmProcessOutput::Encoding Encoding;
   /** Enumerate parts of the testing and submission process.  */
   enum Part
   {
@@ -232,17 +218,14 @@ public:
   bool ShouldPrintLabels() { return this->PrintLabels; }
 
   bool ShouldCompressTestOutput();
-  bool ShouldCompressMemCheckOutput();
   bool CompressString(std::string& str);
-
-  std::string GetCDashVersion();
 
   std::string GetStopTime() { return this->StopTime; }
   void SetStopTime(std::string const& time);
 
   /** Used for parallel ctest job scheduling */
   std::string GetScheduleType() { return this->ScheduleType; }
-  void SetScheduleType(std::string type) { this->ScheduleType = type; }
+  void SetScheduleType(std::string const& type) { this->ScheduleType = type; }
 
   /** The max output width */
   int GetMaxTestNameWidth() const;
@@ -270,7 +253,8 @@ public:
    */
   bool RunCommand(const char* command, std::string* stdOut,
                   std::string* stdErr, int* retVal = CM_NULLPTR,
-                  const char* dir = CM_NULLPTR, double timeout = 0.0);
+                  const char* dir = CM_NULLPTR, double timeout = 0.0,
+                  Encoding encoding = cmProcessOutput::Auto);
 
   /**
    * Clean/make safe for xml the given value such that it may be used as
@@ -289,7 +273,8 @@ public:
    * and retVal is return value or exception.
    */
   int RunMakeCommand(const char* command, std::string& output, int* retVal,
-                     const char* dir, int timeout, std::ostream& ofs);
+                     const char* dir, int timeout, std::ostream& ofs,
+                     Encoding encoding = cmProcessOutput::Auto);
 
   /** Return the current tag */
   std::string GetCurrentTag();
@@ -336,7 +321,8 @@ public:
    */
   int RunTest(std::vector<const char*> args, std::string* output, int* retVal,
               std::ostream* logfile, double testTimeOut,
-              std::vector<std::string>* environment);
+              std::vector<std::string>* environment,
+              Encoding encoding = cmProcessOutput::Auto);
 
   /**
    * Execute handler and return its result. If the handler fails, it returns
@@ -487,10 +473,6 @@ private:
 
   bool RunConfigurationScript;
 
-  // flag for lazy getter (optimization)
-  bool ComputedCompressTestOutput;
-  bool ComputedCompressMemCheckOutput;
-
   int GenerateNotesFile(const char* files);
 
   void DetermineNextDayStop();
@@ -547,7 +529,6 @@ private:
 
   bool CompressXMLFiles;
   bool CompressTestOutput;
-  bool CompressMemCheckOutput;
 
   void InitStreams();
   std::ostream* StreamOut;
@@ -649,5 +630,21 @@ inline std::ostream& operator<<(std::ostream& os, const cmCTestLogWrite& c)
   os.flush();
   return os;
 }
+
+#define cmCTestLog(ctSelf, logType, msg)                                      \
+  do {                                                                        \
+    std::ostringstream cmCTestLog_msg;                                        \
+    cmCTestLog_msg << msg;                                                    \
+    (ctSelf)->Log(cmCTest::logType, __FILE__, __LINE__,                       \
+                  cmCTestLog_msg.str().c_str());                              \
+  } while (false)
+
+#define cmCTestOptionalLog(ctSelf, logType, msg, suppress)                    \
+  do {                                                                        \
+    std::ostringstream cmCTestLog_msg;                                        \
+    cmCTestLog_msg << msg;                                                    \
+    (ctSelf)->Log(cmCTest::logType, __FILE__, __LINE__,                       \
+                  cmCTestLog_msg.str().c_str(), suppress);                    \
+  } while (false)
 
 #endif

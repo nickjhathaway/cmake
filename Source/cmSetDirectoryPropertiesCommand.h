@@ -3,7 +3,15 @@
 #ifndef cmSetDirectoryPropertiesCommand_h
 #define cmSetDirectoryPropertiesCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
+class cmMakefile;
 
 class cmSetDirectoryPropertiesCommand : public cmCommand
 {
@@ -21,27 +29,12 @@ public:
                    cmExecutionStatus& status) CM_OVERRIDE;
 
   /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE
-  {
-    return "set_directory_properties";
-  }
-
-  /**
    * Static entry point for use by other commands
    */
   static bool RunCommand(cmMakefile* mf,
                          std::vector<std::string>::const_iterator ait,
                          std::vector<std::string>::const_iterator aitend,
                          std::string& errors);
-
-  cmTypeMacro(cmSetDirectoryPropertiesCommand, cmCommand);
 };
 
 #endif

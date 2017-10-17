@@ -3,7 +3,14 @@
 #ifndef cmGetDirectoryPropertyCommand_h
 #define cmGetDirectoryPropertyCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 class cmGetDirectoryPropertyCommand : public cmCommand
 {
@@ -16,18 +23,6 @@ public:
    */
   bool InitialPass(std::vector<std::string> const& args,
                    cmExecutionStatus& status) CM_OVERRIDE;
-
-  /**
-   * This determines if the command is invoked when in script mode.
-   */
-  bool IsScriptable() const CM_OVERRIDE { return true; }
-
-  /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "get_directory_property"; }
-
-  cmTypeMacro(cmGetDirectoryPropertyCommand, cmCommand);
 
 private:
   void StoreResult(const std::string& variable, const char* prop);

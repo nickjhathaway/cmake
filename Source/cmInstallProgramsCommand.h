@@ -3,7 +3,14 @@
 #ifndef cmInstallProgramsCommand_h
 #define cmInstallProgramsCommand_h
 
+#include "cmConfigure.h"
+
+#include <string>
+#include <vector>
+
 #include "cmCommand.h"
+
+class cmExecutionStatus;
 
 /** \class cmInstallProgramsCommand
  * \brief Specifies where to install some programs
@@ -27,11 +34,6 @@ public:
                    cmExecutionStatus& status) CM_OVERRIDE;
 
   /**
-   * The name of the command as specified in CMakeList.txt.
-   */
-  std::string GetName() const CM_OVERRIDE { return "install_programs"; }
-
-  /**
    * This is called at the end after all the information
    * specified by the command is accumulated. Most commands do
    * not implement this method.  At this point, reading and
@@ -40,8 +42,6 @@ public:
   void FinalPass() CM_OVERRIDE;
 
   bool HasFinalPass() const CM_OVERRIDE { return true; }
-
-  cmTypeMacro(cmInstallProgramsCommand, cmCommand);
 
 protected:
   std::string FindInstallSource(const char* name) const;
