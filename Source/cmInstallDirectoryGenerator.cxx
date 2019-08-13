@@ -7,7 +7,8 @@
 #include "cmLocalGenerator.h"
 #include "cmMakefile.h"
 #include "cmSystemTools.h"
-#include "cm_auto_ptr.hxx"
+
+#include <memory> // IWYU pragma: keep
 
 cmInstallDirectoryGenerator::cmInstallDirectoryGenerator(
   std::vector<std::string> const& dirs, const char* dest,
@@ -17,7 +18,7 @@ cmInstallDirectoryGenerator::cmInstallDirectoryGenerator(
   bool optional)
   : cmInstallGenerator(dest, configurations, component, message,
                        exclude_from_all)
-  , LocalGenerator(CM_NULLPTR)
+  , LocalGenerator(nullptr)
   , Directories(dirs)
   , FilePermissions(file_permissions)
   , DirPermissions(dir_permissions)
@@ -30,21 +31,22 @@ cmInstallDirectoryGenerator::cmInstallDirectoryGenerator(
   }
 
   // We need per-config actions if any directories have generator expressions.
-  for (std::vector<std::string>::const_iterator i = dirs.begin();
-       !this->ActionsPerConfig && i != dirs.end(); ++i) {
-    if (cmGeneratorExpression::Find(*i) != std::string::npos) {
-      this->ActionsPerConfig = true;
+  if (!this->ActionsPerConfig) {
+    for (std::string const& dir : dirs) {
+      if (cmGeneratorExpression::Find(dir) != std::string::npos) {
+        this->ActionsPerConfig = true;
+        break;
+      }
     }
   }
 }
 
-cmInstallDirectoryGenerator::~cmInstallDirectoryGenerator()
-{
-}
+cmInstallDirectoryGenerator::~cmInstallDirectoryGenerator() = default;
 
-void cmInstallDirectoryGenerator::Compute(cmLocalGenerator* lg)
+bool cmInstallDirectoryGenerator::Compute(cmLocalGenerator* lg)
 {
-  LocalGenerator = lg;
+  this->LocalGenerator = lg;
+  return true;
 }
 
 void cmInstallDirectoryGenerator::GenerateScriptActions(std::ostream& os,
@@ -62,19 +64,17 @@ void cmInstallDirectoryGenerator::GenerateScriptForConfig(
 {
   std::vector<std::string> dirs;
   cmGeneratorExpression ge;
-  for (std::vector<std::string>::const_iterator i = this->Directories.begin();
-       i != this->Directories.end(); ++i) {
-    CM_AUTO_PTR<cmCompiledGeneratorExpression> cge = ge.Parse(*i);
+  for (std::string const& d : this->Directories) {
+    std::unique_ptr<cmCompiledGeneratorExpression> cge = ge.Parse(d);
     cmSystemTools::ExpandListArgument(
       cge->Evaluate(this->LocalGenerator, config), dirs);
   }
 
   // Make sure all dirs have absolute paths.
   cmMakefile const& mf = *this->LocalGenerator->GetMakefile();
-  for (std::vector<std::string>::iterator i = dirs.begin(); i != dirs.end();
-       ++i) {
-    if (!cmSystemTools::FileIsFullPath(i->c_str())) {
-      *i = std::string(mf.GetCurrentSourceDirectory()) + "/" + *i;
+  for (std::string& d : dirs) {
+    if (!cmSystemTools::FileIsFullPath(d)) {
+      d = mf.GetCurrentSourceDirectory() + "/" + d;
     }
   }
 
@@ -86,7 +86,7 @@ void cmInstallDirectoryGenerator::AddDirectoryInstallRule(
   std::vector<std::string> const& dirs)
 {
   // Write code to install the directories.
-  const char* no_rename = CM_NULLPTR;
+  const char* no_rename = nullptr;
   this->AddInstallRule(os, this->GetDestination(config),
                        cmInstallType_DIRECTORY, dirs, this->Optional,
                        this->FilePermissions.c_str(),

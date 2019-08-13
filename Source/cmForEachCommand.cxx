@@ -2,15 +2,17 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmForEachCommand.h"
 
+#include <memory> // IWYU pragma: keep
 #include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "cmAlgorithms.h"
 #include "cmExecutionStatus.h"
 #include "cmMakefile.h"
+#include "cmMessageType.h"
+#include "cmRange.h"
 #include "cmSystemTools.h"
-#include "cm_auto_ptr.hxx"
-#include "cmake.h"
 
 cmForEachFunctionBlocker::cmForEachFunctionBlocker(cmMakefile* mf)
   : Makefile(mf)
@@ -28,15 +30,16 @@ bool cmForEachFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
                                                  cmMakefile& mf,
                                                  cmExecutionStatus& inStatus)
 {
-  if (!cmSystemTools::Strucmp(lff.Name.c_str(), "foreach")) {
+  if (lff.Name.Lower == "foreach") {
     // record the number of nested foreach commands
     this->Depth++;
-  } else if (!cmSystemTools::Strucmp(lff.Name.c_str(), "endforeach")) {
+  } else if (lff.Name.Lower == "endforeach") {
     // if this is the endofreach for this statement
     if (!this->Depth) {
       // Remove the function blocker for this scope or bail.
-      CM_AUTO_PTR<cmFunctionBlocker> fb(mf.RemoveFunctionBlocker(this, lff));
-      if (!fb.get()) {
+      std::unique_ptr<cmFunctionBlocker> fb(
+        mf.RemoveFunctionBlocker(this, lff));
+      if (!fb) {
         return false;
       }
 
@@ -46,17 +49,15 @@ bool cmForEachFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
       if (mf.GetDefinition(this->Args[0])) {
         oldDef = mf.GetDefinition(this->Args[0]);
       }
-      std::vector<std::string>::const_iterator j = this->Args.begin();
-      ++j;
 
-      for (; j != this->Args.end(); ++j) {
+      for (std::string const& arg : cmMakeRange(this->Args).advance(1)) {
         // set the variable to the loop value
-        mf.AddDefinition(this->Args[0], j->c_str());
+        mf.AddDefinition(this->Args[0], arg.c_str());
         // Invoke all the functions that were collected in the block.
         cmExecutionStatus status;
-        for (unsigned int c = 0; c < this->Functions.size(); ++c) {
+        for (cmListFileFunction const& func : this->Functions) {
           status.Clear();
-          mf.ExecuteCommand(this->Functions[c], status);
+          mf.ExecuteCommand(func, status);
           if (status.GetReturnInvoked()) {
             inStatus.SetReturnInvoked();
             // restore the variable to its prior value
@@ -95,7 +96,7 @@ bool cmForEachFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
 bool cmForEachFunctionBlocker::ShouldRemove(const cmListFileFunction& lff,
                                             cmMakefile& mf)
 {
-  if (!cmSystemTools::Strucmp(lff.Name.c_str(), "endforeach")) {
+  if (lff.Name.Lower == "endforeach") {
     std::vector<std::string> expandedArguments;
     mf.ExpandArguments(lff.Arguments, expandedArguments);
     // if the endforeach has arguments then make sure
@@ -120,7 +121,7 @@ bool cmForEachCommand::InitialPass(std::vector<std::string> const& args,
   }
 
   // create a function blocker
-  cmForEachFunctionBlocker* f = new cmForEachFunctionBlocker(this->Makefile);
+  auto f = cm::make_unique<cmForEachFunctionBlocker>(this->Makefile);
   if (args.size() > 1) {
     if (args[1] == "RANGE") {
       int start = 0;
@@ -162,7 +163,7 @@ bool cmForEachCommand::InitialPass(std::vector<std::string> const& args,
           break;
         }
         sprintf(buffer, "%d", cc);
-        range.push_back(buffer);
+        range.emplace_back(buffer);
         if (cc == stop) {
           break;
         }
@@ -174,14 +175,14 @@ bool cmForEachCommand::InitialPass(std::vector<std::string> const& args,
   } else {
     f->Args = args;
   }
-  this->Makefile->AddFunctionBlocker(f);
+  this->Makefile->AddFunctionBlocker(f.release());
 
   return true;
 }
 
 bool cmForEachCommand::HandleInMode(std::vector<std::string> const& args)
 {
-  CM_AUTO_PTR<cmForEachFunctionBlocker> f(
+  std::unique_ptr<cmForEachFunctionBlocker> f(
     new cmForEachFunctionBlocker(this->Makefile));
   f->Args.push_back(args[0]);
 
@@ -208,12 +209,12 @@ bool cmForEachCommand::HandleInMode(std::vector<std::string> const& args)
       std::ostringstream e;
       e << "Unknown argument:\n"
         << "  " << args[i] << "\n";
-      this->Makefile->IssueMessage(cmake::FATAL_ERROR, e.str());
+      this->Makefile->IssueMessage(MessageType::FATAL_ERROR, e.str());
       return true;
     }
   }
 
-  this->Makefile->AddFunctionBlocker(f.release()); // TODO: pass auto_ptr
+  this->Makefile->AddFunctionBlocker(f.release()); // TODO: pass unique_ptr
 
   return true;
 }

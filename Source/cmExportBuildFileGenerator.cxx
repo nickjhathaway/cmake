@@ -9,6 +9,7 @@
 #include "cmGlobalGenerator.h"
 #include "cmLocalGenerator.h"
 #include "cmMakefile.h"
+#include "cmMessageType.h"
 #include "cmPolicies.h"
 #include "cmStateTypes.h"
 #include "cmSystemTools.h"
@@ -26,8 +27,8 @@ class cmSourceFile;
 
 cmExportBuildFileGenerator::cmExportBuildFileGenerator()
 {
-  this->LG = CM_NULLPTR;
-  this->ExportSet = CM_NULLPTR;
+  this->LG = nullptr;
+  this->ExportSet = nullptr;
 }
 
 void cmExportBuildFileGenerator::Compute(cmLocalGenerator* lg)
@@ -45,9 +46,8 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
     std::string sep;
     std::vector<std::string> targets;
     this->GetTargets(targets);
-    for (std::vector<std::string>::const_iterator tei = targets.begin();
-         tei != targets.end(); ++tei) {
-      cmGeneratorTarget* te = this->LG->FindGeneratorTargetToUse(*tei);
+    for (std::string const& tei : targets) {
+      cmGeneratorTarget* te = this->LG->FindGeneratorTargetToUse(tei);
       expectedTargets += sep + this->Namespace + te->GetExportName();
       sep = " ";
       if (this->ExportedTargets.insert(te).second) {
@@ -56,11 +56,11 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
         std::ostringstream e;
         e << "given target \"" << te->GetName() << "\" more than once.";
         this->LG->GetGlobalGenerator()->GetCMakeInstance()->IssueMessage(
-          cmake::FATAL_ERROR, e.str(),
+          MessageType::FATAL_ERROR, e.str(),
           this->LG->GetMakefile()->GetBacktrace());
         return false;
       }
-      if (te->GetType() == cmStateEnums::INTERFACE_LIBRARY) {
+      if (this->GetExportTargetType(te) == cmStateEnums::INTERFACE_LIBRARY) {
         this->GenerateRequiredCMakeVersion(os, "3.0.0");
       }
     }
@@ -71,11 +71,8 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
   std::vector<std::string> missingTargets;
 
   // Create all the imported targets.
-  for (std::vector<cmGeneratorTarget*>::const_iterator tei =
-         this->Exports.begin();
-       tei != this->Exports.end(); ++tei) {
-    cmGeneratorTarget* gte = *tei;
-    this->GenerateImportTargetCode(os, gte);
+  for (cmGeneratorTarget* gte : this->Exports) {
+    this->GenerateImportTargetCode(os, gte, this->GetExportTargetType(gte));
 
     gte->Target->AppendBuildInterfaceIncludes();
 
@@ -99,8 +96,26 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
     this->PopulateInterfaceProperty("INTERFACE_COMPILE_FEATURES", gte,
                                     cmGeneratorExpression::BuildInterface,
                                     properties, missingTargets);
+    this->PopulateInterfaceProperty("INTERFACE_LINK_OPTIONS", gte,
+                                    cmGeneratorExpression::BuildInterface,
+                                    properties, missingTargets);
+    this->PopulateInterfaceProperty("INTERFACE_LINK_DIRECTORIES", gte,
+                                    cmGeneratorExpression::BuildInterface,
+                                    properties, missingTargets);
+    this->PopulateInterfaceProperty("INTERFACE_LINK_DEPENDS", gte,
+                                    cmGeneratorExpression::BuildInterface,
+                                    properties, missingTargets);
     this->PopulateInterfaceProperty("INTERFACE_POSITION_INDEPENDENT_CODE", gte,
                                     properties);
+
+    std::string errorMessage;
+    if (!this->PopulateExportProperties(gte, properties, errorMessage)) {
+      this->LG->GetGlobalGenerator()->GetCMakeInstance()->IssueMessage(
+        MessageType::FATAL_ERROR, errorMessage,
+        this->LG->GetMakefile()->GetBacktrace());
+      return false;
+    }
+
     const bool newCMP0022Behavior =
       gte->GetPolicyStatusCMP0022() != cmPolicies::WARN &&
       gte->GetPolicyStatusCMP0022() != cmPolicies::OLD;
@@ -115,10 +130,8 @@ bool cmExportBuildFileGenerator::GenerateMainFile(std::ostream& os)
   }
 
   // Generate import file content for each configuration.
-  for (std::vector<std::string>::const_iterator ci =
-         this->Configurations.begin();
-       ci != this->Configurations.end(); ++ci) {
-    this->GenerateImportConfig(os, *ci, missingTargets);
+  for (std::string const& c : this->Configurations) {
+    this->GenerateImportConfig(os, c, missingTargets);
   }
 
   this->GenerateMissingTargetsCheckCode(os, missingTargets);
@@ -130,19 +143,17 @@ void cmExportBuildFileGenerator::GenerateImportTargetsConfig(
   std::ostream& os, const std::string& config, std::string const& suffix,
   std::vector<std::string>& missingTargets)
 {
-  for (std::vector<cmGeneratorTarget*>::const_iterator tei =
-         this->Exports.begin();
-       tei != this->Exports.end(); ++tei) {
+  for (cmGeneratorTarget* target : this->Exports) {
     // Collect import properties for this target.
-    cmGeneratorTarget* target = *tei;
     ImportPropertyMap properties;
 
-    if (target->GetType() != cmStateEnums::INTERFACE_LIBRARY) {
+    if (this->GetExportTargetType(target) != cmStateEnums::INTERFACE_LIBRARY) {
       this->SetImportLocationProperty(config, suffix, target, properties);
     }
     if (!properties.empty()) {
       // Get the rest of the target details.
-      if (target->GetType() != cmStateEnums::INTERFACE_LIBRARY) {
+      if (this->GetExportTargetType(target) !=
+          cmStateEnums::INTERFACE_LIBRARY) {
         this->SetImportDetailProperties(config, suffix, target, properties,
                                         missingTargets);
         this->SetImportLinkInterface(config, suffix,
@@ -150,7 +161,7 @@ void cmExportBuildFileGenerator::GenerateImportTargetsConfig(
                                      target, properties, missingTargets);
       }
 
-      // TOOD: PUBLIC_HEADER_LOCATION
+      // TODO: PUBLIC_HEADER_LOCATION
       // This should wait until the build feature propagation stuff
       // is done.  Then this can be a propagated include directory.
       // this->GenerateImportProperty(config, te->HeaderGenerator,
@@ -160,6 +171,21 @@ void cmExportBuildFileGenerator::GenerateImportTargetsConfig(
       this->GenerateImportPropertyCode(os, config, target, properties);
     }
   }
+}
+
+cmStateEnums::TargetType cmExportBuildFileGenerator::GetExportTargetType(
+  cmGeneratorTarget const* target) const
+{
+  cmStateEnums::TargetType targetType = target->GetType();
+  // An object library exports as an interface library if we cannot
+  // tell clients where to find the objects.  This is sufficient
+  // to support transitive usage requirements on other targets that
+  // use the object library.
+  if (targetType == cmStateEnums::OBJECT_LIBRARY &&
+      !this->LG->GetGlobalGenerator()->HasKnownObjectFileLocation(nullptr)) {
+    targetType = cmStateEnums::INTERFACE_LIBRARY;
+  }
+  return targetType;
 }
 
 void cmExportBuildFileGenerator::SetExportSet(cmExportSet* exportSet)
@@ -184,10 +210,8 @@ void cmExportBuildFileGenerator::SetImportLocationProperty(
     target->GetObjectSources(objectSources, config);
     std::string const obj_dir = target->GetObjectDirectory(config);
     std::vector<std::string> objects;
-    for (std::vector<cmSourceFile const*>::const_iterator si =
-           objectSources.begin();
-         si != objectSources.end(); ++si) {
-      const std::string& obj = target->GetObjectName(*si);
+    for (cmSourceFile const* sf : objectSources) {
+      const std::string& obj = target->GetObjectName(sf);
       objects.push_back(obj_dir + obj);
     }
 
@@ -210,13 +234,14 @@ void cmExportBuildFileGenerator::SetImportLocationProperty(
     }
 
     // Add the import library for windows DLLs.
-    if (target->HasImportLibrary() &&
+    if (target->HasImportLibrary(config) &&
         mf->GetDefinition("CMAKE_IMPORT_LIBRARY_SUFFIX")) {
       std::string prop = "IMPORTED_IMPLIB";
       prop += suffix;
       std::string value =
         target->GetFullPath(config, cmStateEnums::ImportLibraryArtifact);
-      target->GetImplibGNUtoMS(value, value, "${CMAKE_IMPORT_LIBRARY_SUFFIX}");
+      target->GetImplibGNUtoMS(config, value, value,
+                               "${CMAKE_IMPORT_LIBRARY_SUFFIX}");
       properties[prop] = value;
     }
   }
@@ -233,13 +258,13 @@ void cmExportBuildFileGenerator::HandleMissingTarget(
       dependee->GetLocalGenerator()->GetGlobalGenerator();
     std::vector<std::string> namespaces = this->FindNamespaces(gg, name);
 
-    int targetOccurrences = (int)namespaces.size();
+    int targetOccurrences = static_cast<int>(namespaces.size());
     if (targetOccurrences == 1) {
       std::string missingTarget = namespaces[0];
 
       missingTarget += dependee->GetExportName();
       link_libs += missingTarget;
-      missingTargets.push_back(missingTarget);
+      missingTargets.push_back(std::move(missingTarget));
       return;
     }
     // We are not appending, so all exported targets should be
@@ -256,10 +281,8 @@ void cmExportBuildFileGenerator::GetTargets(
   std::vector<std::string>& targets) const
 {
   if (this->ExportSet) {
-    for (std::vector<cmTargetExport*>::const_iterator tei =
-           this->ExportSet->GetTargetExports()->begin();
-         tei != this->ExportSet->GetTargetExports()->end(); ++tei) {
-      targets.push_back((*tei)->TargetName);
+    for (cmTargetExport* te : *this->ExportSet->GetTargetExports()) {
+      targets.push_back(te->TargetName);
     }
     return;
   }
@@ -274,10 +297,8 @@ std::vector<std::string> cmExportBuildFileGenerator::FindNamespaces(
   std::map<std::string, cmExportBuildFileGenerator*>& exportSets =
     gg->GetBuildExportSets();
 
-  for (std::map<std::string, cmExportBuildFileGenerator*>::const_iterator
-         expIt = exportSets.begin();
-       expIt != exportSets.end(); ++expIt) {
-    const cmExportBuildFileGenerator* exportSet = expIt->second;
+  for (auto const& exp : exportSets) {
+    const cmExportBuildFileGenerator* exportSet = exp.second;
     std::vector<std::string> targets;
     exportSet->GetTargets(targets);
     if (std::find(targets.begin(), targets.end(), name) != targets.end()) {
@@ -308,7 +329,8 @@ void cmExportBuildFileGenerator::ComplainAboutMissingTarget(
     << "consider using the APPEND option with multiple separate calls.";
 
   this->LG->GetGlobalGenerator()->GetCMakeInstance()->IssueMessage(
-    cmake::FATAL_ERROR, e.str(), this->LG->GetMakefile()->GetBacktrace());
+    MessageType::FATAL_ERROR, e.str(),
+    this->LG->GetMakefile()->GetBacktrace());
 }
 
 std::string cmExportBuildFileGenerator::InstallNameDir(

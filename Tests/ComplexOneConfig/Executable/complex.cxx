@@ -17,7 +17,7 @@ extern "C" {
 #include <stdio.h>
 #include <sys/stat.h>
 #if !defined(S_ISDIR)
-#define S_ISDIR(mode) ((mode)&_S_IFDIR)
+#  define S_ISDIR(mode) ((mode)&_S_IFDIR)
 #endif
 
 #ifdef COMPLEX_TEST_LINK_STATIC
@@ -45,23 +45,23 @@ void cmPassed(const char* Message, const char* m2 = "")
 }
 
 #ifndef COMPLEX_DEFINED_PRE
-#error "COMPLEX_DEFINED_PRE not defined!"
+#  error "COMPLEX_DEFINED_PRE not defined!"
 #endif
 
 #ifdef COMPLEX_DEFINED
-#error "COMPLEX_DEFINED is defined but it should not!"
+#  error "COMPLEX_DEFINED is defined but it should not!"
 #endif
 
 #ifndef COMPLEX_DEFINED_POST
-#error "COMPLEX_DEFINED_POST not defined!"
+#  error "COMPLEX_DEFINED_POST not defined!"
 #endif
 
 #ifndef CMAKE_IS_REALLY_FUN
-#error This is a problem. Looks like ADD_DEFINITIONS and REMOVE_DEFINITIONS does not work
+#  error This is a problem. Looks like ADD_DEFINITIONS and REMOVE_DEFINITIONS does not work
 #endif
 
 #if defined(NDEBUG) && !defined(CMAKE_IS_FUN_IN_RELEASE_MODE)
-#error Per-configuration directory-level definition not inherited.
+#  error Per-configuration directory-level definition not inherited.
 #endif
 
 // ======================================================================
@@ -200,8 +200,8 @@ int main()
     cmFailed(msg);
   }
 
-// ----------------------------------------------------------------------
-// Test ADD_DEFINITIONS
+  // ----------------------------------------------------------------------
+  // Test ADD_DEFINITIONS
 
 #ifndef CMAKE_IS_FUN
   cmFailed("CMake is not fun, so it is broken and should be fixed.");
@@ -240,8 +240,8 @@ int main()
   cmPassed("CMake found the listfile stack properly");
 #endif
 
-// ----------------------------------------------------------------------
-// Test SET, VARIABLE_REQUIRES
+  // ----------------------------------------------------------------------
+  // Test SET, VARIABLE_REQUIRES
 
 #ifdef SHOULD_NOT_BE_DEFINED
   cmFailed("IF or SET is broken, SHOULD_NOT_BE_DEFINED is defined.");
@@ -261,6 +261,12 @@ int main()
   cmPassed("ONE_VAR is defined.");
 #endif
 
+#ifndef ONE_VAR_AND_INDENTED
+  cmFailed("cmakedefine is broken, ONE_VAR_AND_INDENTED is not defined.");
+#else
+  cmPassed("ONE_VAR_AND_INDENTED is defined.");
+#endif
+
 #ifndef ONE_VAR_IS_DEFINED
   cmFailed("cmakedefine, SET or VARIABLE_REQUIRES is broken, "
            "ONE_VAR_IS_DEFINED is not defined.");
@@ -274,6 +280,12 @@ int main()
   cmPassed("ZERO_VAR is not defined.");
 #endif
 
+#ifdef ZERO_VAR_AND_INDENTED
+  cmFailed("cmakedefine is broken, ZERO_VAR_AND_INDENTED is defined.");
+#else
+  cmPassed("ZERO_VAR_AND_INDENTED is not defined.");
+#endif
+
 #ifndef STRING_VAR
   cmFailed("the CONFIGURE_FILE command is broken, STRING_VAR is not defined.");
 #else
@@ -285,8 +297,8 @@ int main()
   }
 #endif
 
-// ----------------------------------------------------------------------
-// Test various IF/ELSE combinations
+  // ----------------------------------------------------------------------
+  // Test various IF/ELSE combinations
 
 #ifdef SHOULD_NOT_BE_DEFINED_NOT
   cmFailed("IF or SET is broken, SHOULD_NOT_BE_DEFINED_NOT is defined.");
@@ -728,8 +740,8 @@ int main()
   cmPassed("SHOULD_BE_DEFINED_STRGREATER_EQUAL3 is defined.");
 #endif
 
-// ----------------------------------------------------------------------
-// Test FOREACH
+  // ----------------------------------------------------------------------
+  // Test FOREACH
 
 #ifndef FOREACH_VAR1
   cmFailed("the FOREACH, SET or CONFIGURE_FILE command is broken, "
@@ -779,8 +791,8 @@ int main()
     cmPassed("WHILE command is working");
   }
 
-// ----------------------------------------------------------------------
-// Test LOAD_CACHE
+  // ----------------------------------------------------------------------
+  // Test LOAD_CACHE
 
 #ifndef CACHE_TEST_VAR1
   cmFailed("the LOAD_CACHE or CONFIGURE_FILE command is broken, "
@@ -889,8 +901,8 @@ int main()
 
   TestAndRemoveFile("Executable/Temp/complex-required.txt");
 
-// ----------------------------------------------------------------------
-// Test FIND_LIBRARY
+  // ----------------------------------------------------------------------
+  // Test FIND_LIBRARY
 
 #ifndef FIND_DUMMY_LIB
   cmFailed("the CONFIGURE_FILE command is broken, "
@@ -905,8 +917,8 @@ int main()
   }
 #endif
 
-// ----------------------------------------------------------------------
-// Test SET_SOURCE_FILES_PROPERTIES
+  // ----------------------------------------------------------------------
+  // Test SET_SOURCE_FILES_PROPERTIES
 
 #ifndef FILE_HAS_EXTRA_COMPILE_FLAGS
   cmFailed("SET_SOURCE_FILES_PROPERTIES failed at setting "
@@ -917,9 +929,9 @@ int main()
 #endif
 
 #if 0 // Disable until implemented everywhere.
-#ifndef FILE_DEFINE_STRING
+#  ifndef FILE_DEFINE_STRING
   cmFailed("SET_SOURCE_FILES_PROPERTIES failed at setting FILE_DEFINE_STRING flag");
-#else
+#  else
   if(strcmp(FILE_DEFINE_STRING, "hello") != 0)
     {
     cmFailed("SET_SOURCE_FILES_PROPERTIES failed at setting FILE_DEFINE_STRING flag correctly");
@@ -928,7 +940,7 @@ int main()
     {
     cmPassed("SET_SOURCE_FILES_PROPERTIES succeeded in setting FILE_DEFINE_STRING flag");
     }
-#endif
+#  endif
 #endif
 
 #ifndef FILE_HAS_ABSTRACT
@@ -961,10 +973,10 @@ int main()
 // ----------------------------------------------------------------------
 // Test registry (win32)
 #if defined(_WIN32) && !defined(__CYGWIN__)
-#ifndef REGISTRY_TEST_PATH
+#  ifndef REGISTRY_TEST_PATH
   cmFailed("the CONFIGURE_FILE command is broken, REGISTRY_TEST_PATH is not "
            "defined.");
-#else
+#  else
   std::cout << "REGISTRY_TEST_PATH == " << REGISTRY_TEST_PATH << "\n";
   if (stricmp(REGISTRY_TEST_PATH, BINARY_DIR "/registry_dir") != 0) {
     cmFailed("the 'read registry value' function or CONFIGURE_FILE command is "
@@ -973,7 +985,7 @@ int main()
   } else {
     cmPassed("REGISTRY_TEST_PATH == ", REGISTRY_TEST_PATH);
   }
-#endif
+#  endif
 #endif // defined(_WIN32) && !defined(__CYGWIN__)
 
   if (strcmp(CMAKE_MINIMUM_REQUIRED_VERSION, "2.4") == 0) {
@@ -1029,6 +1041,16 @@ int main()
     cmPassed("cmakedefine01 is working for 1");
   } else {
     cmFailed("cmakedefine01 is not working for 1");
+  }
+  if (SHOULD_BE_ZERO_AND_INDENTED == 0) {
+    cmPassed("cmakedefine01 is working for 0 and indented");
+  } else {
+    cmFailed("cmakedefine01 is not working for 0 and indented");
+  }
+  if (SHOULD_BE_ONE_AND_INDENTED == 1) {
+    cmPassed("cmakedefine01 is working for 1 and indented");
+  } else {
+    cmFailed("cmakedefine01 is not working for 1 and indented");
   }
 #ifdef FORCE_TEST
   cmFailed("CMake SET CACHE FORCE");

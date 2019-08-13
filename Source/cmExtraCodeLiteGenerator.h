@@ -3,7 +3,7 @@
 #ifndef cmGlobalCodeLiteGenerator_h
 #define cmGlobalCodeLiteGenerator_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmExternalMakefileProjectGenerator.h"
 
@@ -23,7 +23,7 @@ class cmExtraCodeLiteGenerator : public cmExternalMakefileProjectGenerator
 protected:
   std::string ConfigName;
   std::string WorkspacePath;
-  unsigned int CpuCount;
+  unsigned int CpuCount = 2;
 
 protected:
   std::string GetCodeLiteCompilerName(const cmMakefile* mf) const;
@@ -60,7 +60,7 @@ public:
 
   static cmExternalMakefileProjectGeneratorFactory* GetFactory();
 
-  void Generate() CM_OVERRIDE;
+  void Generate() override;
   void CreateProjectFile(const std::vector<cmLocalGenerator*>& lgs);
 
   void CreateNewProjectFile(const std::vector<cmLocalGenerator*>& lgs,

@@ -21,17 +21,22 @@ class cmCustomCommandGenerator
   bool OldStyle;
   bool MakeVars;
   cmGeneratorExpression* GE;
-  mutable bool DependsDone;
-  mutable std::vector<std::string> Depends;
   cmCustomCommandLines CommandLines;
+  std::vector<std::vector<std::string>> EmulatorsWithArguments;
+  std::vector<std::string> Depends;
+  std::string WorkingDirectory;
 
-  const char* GetCrossCompilingEmulator(unsigned int c) const;
+  void FillEmulatorsWithArguments();
+  std::vector<std::string> GetCrossCompilingEmulator(unsigned int c) const;
   const char* GetArgv0Location(unsigned int c) const;
 
 public:
-  cmCustomCommandGenerator(cmCustomCommand const& cc,
-                           const std::string& config, cmLocalGenerator* lg);
+  cmCustomCommandGenerator(cmCustomCommand const& cc, std::string config,
+                           cmLocalGenerator* lg);
   ~cmCustomCommandGenerator();
+  cmCustomCommandGenerator(const cmCustomCommandGenerator&) = delete;
+  cmCustomCommandGenerator& operator=(const cmCustomCommandGenerator&) =
+    delete;
   cmCustomCommand const& GetCC() const { return this->CC; }
   unsigned int GetNumberOfCommands() const;
   std::string GetCommand(unsigned int c) const;
@@ -41,6 +46,7 @@ public:
   std::vector<std::string> const& GetOutputs() const;
   std::vector<std::string> const& GetByproducts() const;
   std::vector<std::string> const& GetDepends() const;
+  bool HasOnlyEmptyCommandLines() const;
 };
 
 #endif

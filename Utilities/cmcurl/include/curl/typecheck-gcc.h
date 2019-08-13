@@ -7,7 +7,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2019, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -54,6 +54,9 @@ __extension__ ({                                                              \
     if(_curl_is_write_cb_option(_curl_opt))                                   \
       if(!_curl_is_write_cb(value))                                           \
         _curl_easy_setopt_err_write_callback();                               \
+    if((_curl_opt) == CURLOPT_RESOLVER_START_FUNCTION)                        \
+      if(!_curl_is_resolver_start_callback(value))                            \
+        _curl_easy_setopt_err_resolver_start_callback();                      \
     if((_curl_opt) == CURLOPT_READFUNCTION)                                   \
       if(!_curl_is_read_cb(value))                                            \
         _curl_easy_setopt_err_read_cb();                                      \
@@ -96,6 +99,9 @@ __extension__ ({                                                              \
     if((_curl_opt) == CURLOPT_HTTPPOST)                                       \
       if(!_curl_is_arr((value), struct curl_httppost))                        \
         _curl_easy_setopt_err_curl_httpost();                                 \
+    if((_curl_opt) == CURLOPT_MIMEPOST)                                       \
+      if(!_curl_is_ptr((value), curl_mime))                                   \
+        _curl_easy_setopt_err_curl_mimepost();                                \
     if(_curl_is_slist_option(_curl_opt))                                      \
       if(!_curl_is_arr((value), struct curl_slist))                           \
         _curl_easy_setopt_err_curl_slist();                                   \
@@ -107,10 +113,9 @@ __extension__ ({                                                              \
 })
 
 /* wraps curl_easy_getinfo() with typechecking */
-/* FIXME: don't allow const pointers */
 #define curl_easy_getinfo(handle, info, arg)                                  \
 __extension__ ({                                                              \
-  __typeof__(info) _curl_info = info;                                        \
+  __typeof__(info) _curl_info = info;                                         \
   if(__builtin_constant_p(_curl_info)) {                                      \
     if(_curl_is_string_info(_curl_info))                                      \
       if(!_curl_is_arr((arg), char *))                                        \
@@ -130,16 +135,18 @@ __extension__ ({                                                              \
     if(_curl_is_certinfo_info(_curl_info))                                    \
       if(!_curl_is_arr((arg), struct curl_certinfo *))                        \
         _curl_easy_getinfo_err_curl_certinfo();                               \
-   if(_curl_is_socket_info(_curl_info))                                       \
+    if(_curl_is_socket_info(_curl_info))                                      \
       if(!_curl_is_arr((arg), curl_socket_t))                                 \
         _curl_easy_getinfo_err_curl_socket();                                 \
+    if(_curl_is_off_t_info(_curl_info))                                       \
+      if(!_curl_is_arr((arg), curl_off_t))                                    \
+        _curl_easy_getinfo_err_curl_off_t();                                  \
   }                                                                           \
   curl_easy_getinfo(handle, _curl_info, arg);                                 \
 })
 
-/* TODO: typechecking for curl_share_setopt() and curl_multi_setopt(),
- * for now just make sure that the functions are called with three
- * arguments
+/*
+ * For now, just make sure that the functions are called with three arguments
  */
 #define curl_share_setopt(share,opt,param) curl_share_setopt(share,opt,param)
 #define curl_multi_setopt(handle,opt,param) curl_multi_setopt(handle,opt,param)
@@ -164,6 +171,10 @@ _CURL_WARNING(_curl_easy_setopt_err_string,
   )
 _CURL_WARNING(_curl_easy_setopt_err_write_callback,
   "curl_easy_setopt expects a curl_write_callback argument for this option")
+_CURL_WARNING(_curl_easy_setopt_err_resolver_start_callback,
+              "curl_easy_setopt expects a "
+              "curl_resolver_start_callback argument for this option"
+  )
 _CURL_WARNING(_curl_easy_setopt_err_read_cb,
   "curl_easy_setopt expects a curl_read_callback argument for this option")
 _CURL_WARNING(_curl_easy_setopt_err_ioctl_cb,
@@ -197,6 +208,9 @@ _CURL_WARNING(_curl_easy_setopt_err_postfields,
 _CURL_WARNING(_curl_easy_setopt_err_curl_httpost,
               "curl_easy_setopt expects a 'struct curl_httppost *' "
               "argument for this option")
+_CURL_WARNING(_curl_easy_setopt_err_curl_mimepost,
+              "curl_easy_setopt expects a 'curl_mime *' "
+              "argument for this option")
 _CURL_WARNING(_curl_easy_setopt_err_curl_slist,
   "curl_easy_setopt expects a 'struct curl_slist *' argument for this option")
 _CURL_WARNING(_curl_easy_setopt_err_CURLSH,
@@ -218,6 +232,8 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_certinfo,
               "'struct curl_certinfo *' for this info")
 _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
   "curl_easy_getinfo expects a pointer to curl_socket_t for this info")
+_CURL_WARNING(_curl_easy_getinfo_err_curl_off_t,
+  "curl_easy_getinfo expects a pointer to curl_off_t for this info")
 
 /* groups of curl_easy_setops options that take the same type of argument */
 
@@ -238,6 +254,7 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
 #define _curl_is_string_option(option)                                        \
   ((option) == CURLOPT_ABSTRACT_UNIX_SOCKET ||                                \
    (option) == CURLOPT_ACCEPT_ENCODING ||                                     \
+   (option) == CURLOPT_ALTSVC ||                                              \
    (option) == CURLOPT_CAINFO ||                                              \
    (option) == CURLOPT_CAPATH ||                                              \
    (option) == CURLOPT_COOKIE ||                                              \
@@ -251,6 +268,7 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
    (option) == CURLOPT_DNS_LOCAL_IP4 ||                                       \
    (option) == CURLOPT_DNS_LOCAL_IP6 ||                                       \
    (option) == CURLOPT_DNS_SERVERS ||                                         \
+   (option) == CURLOPT_DOH_URL ||                                             \
    (option) == CURLOPT_EGDSOCKET ||                                           \
    (option) == CURLOPT_FTPPORT ||                                             \
    (option) == CURLOPT_FTP_ACCOUNT ||                                         \
@@ -343,6 +361,8 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
    (option) == CURLOPT_SSH_KEYDATA ||                                         \
    (option) == CURLOPT_SSL_CTX_DATA ||                                        \
    (option) == CURLOPT_WRITEDATA ||                                           \
+   (option) == CURLOPT_RESOLVER_START_DATA ||                                 \
+   (option) == CURLOPT_CURLU ||                                               \
    0)
 
 /* evaluates to true if option takes a POST data argument (void* or char*) */
@@ -391,7 +411,11 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
 
 /* true if info expects a pointer to struct curl_socket_t argument */
 #define _curl_is_socket_info(info)                                            \
-  (CURLINFO_SOCKET < (info))
+  (CURLINFO_SOCKET < (info) && (info) < CURLINFO_OFF_T)
+
+/* true if info expects a pointer to curl_off_t argument */
+#define _curl_is_off_t_info(info)                                             \
+  (CURLINFO_OFF_T < (info))
 
 
 /* typecheck helpers -- check whether given expression has requested type*/
@@ -405,7 +429,7 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
  * == or whatsoever.
  */
 
-/* XXX: should evaluate to true iff expr is a pointer */
+/* XXX: should evaluate to true if expr is a pointer */
 #define _curl_is_any_ptr(expr)                                                \
   (sizeof(expr) == sizeof(void *))
 
@@ -477,17 +501,19 @@ _CURL_WARNING(_curl_easy_getinfo_err_curl_socket,
 /* evaluates to true if expr can be passed as POST data (void* or char*) */
 #define _curl_is_postfields(expr)                                             \
   (_curl_is_ptr((expr), void) ||                                              \
-   _curl_is_arr((expr), char))
+   _curl_is_arr((expr), char) ||                                              \
+   _curl_is_arr((expr), unsigned char))
 
-/* FIXME: the whole callback checking is messy...
- * The idea is to tolerate char vs. void and const vs. not const
- * pointers in arguments at least
- */
 /* helper: __builtin_types_compatible_p distinguishes between functions and
  * function pointers, hide it */
 #define _curl_callback_compatible(func, type)                                 \
   (__builtin_types_compatible_p(__typeof__(func), type) ||                    \
    __builtin_types_compatible_p(__typeof__(func) *, type))
+
+/* evaluates to true if expr is of type curl_resolver_start_callback */
+#define _curl_is_resolver_start_callback(expr)       \
+  (_curl_is_NULL(expr) || \
+   _curl_callback_compatible((expr), curl_resolver_start_callback))
 
 /* evaluates to true if expr is of type curl_read_callback or "similar" */
 #define _curl_is_read_cb(expr)                                          \

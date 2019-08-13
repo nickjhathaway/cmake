@@ -2,12 +2,11 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmCTestLaunch.h"
 
-#include "cmConfigure.h"
-
 #include "cmsys/FStream.hxx"
 #include "cmsys/Process.h"
 #include "cmsys/RegularExpression.hxx"
 #include <iostream>
+#include <memory> // IWYU pragma: keep
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,22 +15,22 @@
 #include "cmGlobalGenerator.h"
 #include "cmMakefile.h"
 #include "cmProcessOutput.h"
+#include "cmState.h"
 #include "cmStateSnapshot.h"
 #include "cmSystemTools.h"
 #include "cmXMLWriter.h"
-#include "cm_auto_ptr.hxx"
 #include "cmake.h"
 
 #ifdef _WIN32
-#include <fcntl.h> // for _O_BINARY
-#include <io.h>    // for _setmode
-#include <stdio.h> // for std{out,err} and fileno
+#  include <fcntl.h> // for _O_BINARY
+#  include <io.h>    // for _setmode
+#  include <stdio.h> // for std{out,err} and fileno
 #endif
 
 cmCTestLaunch::cmCTestLaunch(int argc, const char* const* argv)
 {
   this->Passthru = true;
-  this->Process = CM_NULLPTR;
+  this->Process = nullptr;
   this->ExitCode = 1;
   this->CWD = cmSystemTools::GetCurrentWorkingDirectory();
 
@@ -129,7 +128,7 @@ bool cmCTestLaunch::ParseArguments(int argc, const char* const* argv)
     return true;
   }
   this->RealArgC = 0;
-  this->RealArgV = CM_NULLPTR;
+  this->RealArgV = nullptr;
   std::cerr << "No launch/command separator ('--') found!\n";
   return false;
 }
@@ -147,7 +146,7 @@ void cmCTestLaunch::HandleRealArg(const char* arg)
     return;
   }
 #endif
-  this->RealArgs.push_back(arg);
+  this->RealArgs.emplace_back(arg);
 }
 
 void cmCTestLaunch::ComputeFileNames()
@@ -171,9 +170,8 @@ void cmCTestLaunch::ComputeFileNames()
   cmCryptoHash md5(cmCryptoHash::AlgoMD5);
   md5.Initialize();
   md5.Append(this->CWD);
-  for (std::vector<std::string>::const_iterator ai = this->RealArgs.begin();
-       ai != this->RealArgs.end(); ++ai) {
-    md5.Append(*ai);
+  for (std::string const& realArg : this->RealArgs) {
+    md5.Append(realArg);
   }
   this->LogHash = md5.FinalizeHex();
 
@@ -224,11 +222,11 @@ void cmCTestLaunch::RunChild()
 
   // Record child stdout and stderr if necessary.
   if (!this->Passthru) {
-    char* data = CM_NULLPTR;
+    char* data = nullptr;
     int length = 0;
     cmProcessOutput processOutput;
     std::string strdata;
-    while (int p = cmsysProcess_WaitForData(cp, &data, &length, CM_NULLPTR)) {
+    while (int p = cmsysProcess_WaitForData(cp, &data, &length, nullptr)) {
       if (p == cmsysProcess_Pipe_STDOUT) {
         processOutput.DecodeText(data, length, strdata, 1);
         fout.write(strdata.c_str(), strdata.size());
@@ -254,7 +252,7 @@ void cmCTestLaunch::RunChild()
   }
 
   // Wait for the real command to finish.
-  cmsysProcess_WaitForExit(cp, CM_NULLPTR);
+  cmsysProcess_WaitForExit(cp, nullptr);
   this->ExitCode = cmsysProcess_GetExitValue(cp);
 }
 
@@ -285,7 +283,7 @@ void cmCTestLaunch::LoadLabels()
 
   // Labels are listed in per-target files.
   std::string fname = this->OptionBuildDir;
-  fname += cmake::GetCMakeFilesDirectory();
+  fname += "/CMakeFiles";
   fname += "/";
   fname += this->OptionTargetName;
   fname += ".dir/Labels.txt";
@@ -310,7 +308,7 @@ void cmCTestLaunch::LoadLabels()
     if (line[0] == ' ') {
       // Label lines appear indented by one space.
       if (inTarget || inSource) {
-        this->Labels.insert(line.c_str() + 1);
+        this->Labels.insert(line.substr(1));
       }
     } else if (!this->OptionSource.empty() && !inSource) {
       // Non-indented lines specify a source file name.  The first one
@@ -348,30 +346,29 @@ void cmCTestLaunch::WriteXML()
   logXML += ".xml";
 
   // Use cmGeneratedFileStream to atomically create the report file.
-  cmGeneratedFileStream fxml(logXML.c_str());
+  cmGeneratedFileStream fxml(logXML);
   cmXMLWriter xml(fxml, 2);
-  xml.StartElement("Failure");
-  xml.Attribute("type", this->IsError() ? "Error" : "Warning");
-  this->WriteXMLAction(xml);
-  this->WriteXMLCommand(xml);
-  this->WriteXMLResult(xml);
-  this->WriteXMLLabels(xml);
-  xml.EndElement(); // Failure
+  cmXMLElement e2(xml, "Failure");
+  e2.Attribute("type", this->IsError() ? "Error" : "Warning");
+  this->WriteXMLAction(e2);
+  this->WriteXMLCommand(e2);
+  this->WriteXMLResult(e2);
+  this->WriteXMLLabels(e2);
 }
 
-void cmCTestLaunch::WriteXMLAction(cmXMLWriter& xml)
+void cmCTestLaunch::WriteXMLAction(cmXMLElement& e2)
 {
-  xml.Comment("Meta-information about the build action");
-  xml.StartElement("Action");
+  e2.Comment("Meta-information about the build action");
+  cmXMLElement e3(e2, "Action");
 
   // TargetName
   if (!this->OptionTargetName.empty()) {
-    xml.Element("TargetName", this->OptionTargetName);
+    e3.Element("TargetName", this->OptionTargetName);
   }
 
   // Language
   if (!this->OptionLanguage.empty()) {
-    xml.Element("Language", this->OptionLanguage);
+    e3.Element("Language", this->OptionLanguage);
   }
 
   // SourceFile
@@ -380,23 +377,22 @@ void cmCTestLaunch::WriteXMLAction(cmXMLWriter& xml)
     cmSystemTools::ConvertToUnixSlashes(source);
 
     // If file is in source tree use its relative location.
-    if (cmSystemTools::FileIsFullPath(this->SourceDir.c_str()) &&
-        cmSystemTools::FileIsFullPath(source.c_str()) &&
+    if (cmSystemTools::FileIsFullPath(this->SourceDir) &&
+        cmSystemTools::FileIsFullPath(source) &&
         cmSystemTools::IsSubDirectory(source, this->SourceDir)) {
-      source =
-        cmSystemTools::RelativePath(this->SourceDir.c_str(), source.c_str());
+      source = cmSystemTools::RelativePath(this->SourceDir, source);
     }
 
-    xml.Element("SourceFile", source);
+    e3.Element("SourceFile", source);
   }
 
   // OutputFile
   if (!this->OptionOutput.empty()) {
-    xml.Element("OutputFile", this->OptionOutput);
+    e3.Element("OutputFile", this->OptionOutput);
   }
 
   // OutputType
-  const char* outputType = CM_NULLPTR;
+  const char* outputType = nullptr;
   if (!this->OptionTargetType.empty()) {
     if (this->OptionTargetType == "EXECUTABLE") {
       outputType = "executable";
@@ -411,106 +407,99 @@ void cmCTestLaunch::WriteXMLAction(cmXMLWriter& xml)
     outputType = "object file";
   }
   if (outputType) {
-    xml.Element("OutputType", outputType);
+    e3.Element("OutputType", outputType);
   }
-
-  xml.EndElement(); // Action
 }
 
-void cmCTestLaunch::WriteXMLCommand(cmXMLWriter& xml)
+void cmCTestLaunch::WriteXMLCommand(cmXMLElement& e2)
 {
-  xml.Comment("Details of command");
-  xml.StartElement("Command");
+  e2.Comment("Details of command");
+  cmXMLElement e3(e2, "Command");
   if (!this->CWD.empty()) {
-    xml.Element("WorkingDirectory", this->CWD);
+    e3.Element("WorkingDirectory", this->CWD);
   }
-  for (std::vector<std::string>::const_iterator ai = this->RealArgs.begin();
-       ai != this->RealArgs.end(); ++ai) {
-    xml.Element("Argument", *ai);
+  for (std::string const& realArg : this->RealArgs) {
+    e3.Element("Argument", realArg);
   }
-  xml.EndElement(); // Command
 }
 
-void cmCTestLaunch::WriteXMLResult(cmXMLWriter& xml)
+void cmCTestLaunch::WriteXMLResult(cmXMLElement& e2)
 {
-  xml.Comment("Result of command");
-  xml.StartElement("Result");
+  e2.Comment("Result of command");
+  cmXMLElement e3(e2, "Result");
 
   // StdOut
-  xml.StartElement("StdOut");
-  this->DumpFileToXML(xml, this->LogOut);
-  xml.EndElement(); // StdOut
+  this->DumpFileToXML(e3, "StdOut", this->LogOut);
 
   // StdErr
-  xml.StartElement("StdErr");
-  this->DumpFileToXML(xml, this->LogErr);
-  xml.EndElement(); // StdErr
+  this->DumpFileToXML(e3, "StdErr", this->LogErr);
 
   // ExitCondition
-  xml.StartElement("ExitCondition");
+  cmXMLElement e4(e3, "ExitCondition");
   cmsysProcess* cp = this->Process;
   switch (cmsysProcess_GetState(cp)) {
     case cmsysProcess_State_Starting:
-      xml.Content("No process has been executed");
+      e4.Content("No process has been executed");
       break;
     case cmsysProcess_State_Executing:
-      xml.Content("The process is still executing");
+      e4.Content("The process is still executing");
       break;
     case cmsysProcess_State_Disowned:
-      xml.Content("Disowned");
+      e4.Content("Disowned");
       break;
     case cmsysProcess_State_Killed:
-      xml.Content("Killed by parent");
+      e4.Content("Killed by parent");
       break;
 
     case cmsysProcess_State_Expired:
-      xml.Content("Killed when timeout expired");
+      e4.Content("Killed when timeout expired");
       break;
     case cmsysProcess_State_Exited:
-      xml.Content(this->ExitCode);
+      e4.Content(this->ExitCode);
       break;
     case cmsysProcess_State_Exception:
-      xml.Content("Terminated abnormally: ");
-      xml.Content(cmsysProcess_GetExceptionString(cp));
+      e4.Content("Terminated abnormally: ");
+      e4.Content(cmsysProcess_GetExceptionString(cp));
       break;
     case cmsysProcess_State_Error:
-      xml.Content("Error administrating child process: ");
-      xml.Content(cmsysProcess_GetErrorString(cp));
+      e4.Content("Error administrating child process: ");
+      e4.Content(cmsysProcess_GetErrorString(cp));
       break;
-  };
-  xml.EndElement(); // ExitCondition
-
-  xml.EndElement(); // Result
-}
-
-void cmCTestLaunch::WriteXMLLabels(cmXMLWriter& xml)
-{
-  this->LoadLabels();
-  if (!this->Labels.empty()) {
-    xml.Comment("Interested parties");
-    xml.StartElement("Labels");
-    for (std::set<std::string>::const_iterator li = this->Labels.begin();
-         li != this->Labels.end(); ++li) {
-      xml.Element("Label", *li);
-    }
-    xml.EndElement(); // Labels
   }
 }
 
-void cmCTestLaunch::DumpFileToXML(cmXMLWriter& xml, std::string const& fname)
+void cmCTestLaunch::WriteXMLLabels(cmXMLElement& e2)
+{
+  this->LoadLabels();
+  if (!this->Labels.empty()) {
+    e2.Comment("Interested parties");
+    cmXMLElement e3(e2, "Labels");
+    for (std::string const& label : this->Labels) {
+      e3.Element("Label", label);
+    }
+  }
+}
+
+void cmCTestLaunch::DumpFileToXML(cmXMLElement& e3, const char* tag,
+                                  std::string const& fname)
 {
   cmsys::ifstream fin(fname.c_str(), std::ios::in | std::ios::binary);
 
   std::string line;
   const char* sep = "";
 
+  cmXMLElement e4(e3, tag);
   while (cmSystemTools::GetLineFromStream(fin, line)) {
     if (MatchesFilterPrefix(line)) {
       continue;
     }
-
-    xml.Content(sep);
-    xml.Content(line);
+    if (this->Match(line, this->RegexWarningSuppress)) {
+      line = "[CTest: warning suppressed] " + line;
+    } else if (this->Match(line, this->RegexWarning)) {
+      line = "[CTest: warning matched] " + line;
+    }
+    e4.Content(sep);
+    e4.Content(line);
     sep = "\n";
   }
 }
@@ -545,9 +534,9 @@ void cmCTestLaunch::LoadScrapeRules()
   // Common compiler warning formats.  These are much simpler than the
   // full log-scraping expressions because we do not need to extract
   // file and line information.
-  this->RegexWarning.push_back("(^|[ :])[Ww][Aa][Rr][Nn][Ii][Nn][Gg]");
-  this->RegexWarning.push_back("(^|[ :])[Rr][Ee][Mm][Aa][Rr][Kk]");
-  this->RegexWarning.push_back("(^|[ :])[Nn][Oo][Tt][Ee]");
+  this->RegexWarning.emplace_back("(^|[ :])[Ww][Aa][Rr][Nn][Ii][Nn][Gg]");
+  this->RegexWarning.emplace_back("(^|[ :])[Rr][Ee][Mm][Aa][Rr][Kk]");
+  this->RegexWarning.emplace_back("(^|[ :])[Nn][Oo][Tt][Ee]");
 
   // Load custom match rules given to us by CTest.
   this->LoadScrapeRules("Warning", this->RegexWarning);
@@ -565,7 +554,7 @@ void cmCTestLaunch::LoadScrapeRules(
   std::string line;
   cmsys::RegularExpression rex;
   while (cmSystemTools::GetLineFromStream(fin, line)) {
-    if (rex.compile(line.c_str())) {
+    if (rex.compile(line)) {
       regexps.push_back(rex);
     }
   }
@@ -595,9 +584,8 @@ bool cmCTestLaunch::ScrapeLog(std::string const& fname)
 bool cmCTestLaunch::Match(std::string const& line,
                           std::vector<cmsys::RegularExpression>& regexps)
 {
-  for (std::vector<cmsys::RegularExpression>::iterator ri = regexps.begin();
-       ri != regexps.end(); ++ri) {
-    if (ri->find(line.c_str())) {
+  for (cmsys::RegularExpression& r : regexps) {
+    if (r.find(line)) {
       return true;
     }
   }
@@ -623,17 +611,16 @@ int cmCTestLaunch::Main(int argc, const char* const argv[])
 
 void cmCTestLaunch::LoadConfig()
 {
-  cmake cm(cmake::RoleScript);
+  cmake cm(cmake::RoleScript, cmState::CTest);
   cm.SetHomeDirectory("");
   cm.SetHomeOutputDirectory("");
   cm.GetCurrentSnapshot().SetDefaultDefinitions();
   cmGlobalGenerator gg(&cm);
-  CM_AUTO_PTR<cmMakefile> mf(new cmMakefile(&gg, cm.GetCurrentSnapshot()));
+  cmMakefile mf(&gg, cm.GetCurrentSnapshot());
   std::string fname = this->LogDir;
   fname += "CTestLaunchConfig.cmake";
-  if (cmSystemTools::FileExists(fname.c_str()) &&
-      mf->ReadListFile(fname.c_str())) {
-    this->SourceDir = mf->GetSafeDefinition("CTEST_SOURCE_DIRECTORY");
+  if (cmSystemTools::FileExists(fname) && mf.ReadListFile(fname)) {
+    this->SourceDir = mf.GetSafeDefinition("CTEST_SOURCE_DIRECTORY");
     cmSystemTools::ConvertToUnixSlashes(this->SourceDir);
   }
 }

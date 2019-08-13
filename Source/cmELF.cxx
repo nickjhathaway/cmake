@@ -2,10 +2,11 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmELF.h"
 
-#include "cm_auto_ptr.hxx"
+#include "cmAlgorithms.h"
 #include "cm_kwiml.h"
 #include "cmsys/FStream.hxx"
 #include <map>
+#include <memory> // IWYU pragma: keep
 #include <sstream>
 #include <stddef.h>
 #include <utility>
@@ -13,39 +14,39 @@
 
 // Include the ELF format information system header.
 #if defined(__OpenBSD__)
-#include <elf_abi.h>
-#include <stdint.h>
+#  include <elf_abi.h>
+#  include <stdint.h>
 #elif defined(__HAIKU__)
-#include <elf32.h>
-#include <elf64.h>
+#  include <elf32.h>
+#  include <elf64.h>
 typedef struct Elf32_Ehdr Elf32_Ehdr;
 typedef struct Elf32_Shdr Elf32_Shdr;
 typedef struct Elf32_Sym Elf32_Sym;
 typedef struct Elf32_Rel Elf32_Rel;
 typedef struct Elf32_Rela Elf32_Rela;
-#define ELFMAG0 0x7F
-#define ELFMAG1 'E'
-#define ELFMAG2 'L'
-#define ELFMAG3 'F'
-#define ET_NONE 0
-#define ET_REL 1
-#define ET_EXEC 2
-#define ET_DYN 3
-#define ET_CORE 4
-#define EM_386 3
-#define EM_SPARC 2
-#define EM_PPC 20
+#  define ELFMAG0 0x7F
+#  define ELFMAG1 'E'
+#  define ELFMAG2 'L'
+#  define ELFMAG3 'F'
+#  define ET_NONE 0
+#  define ET_REL 1
+#  define ET_EXEC 2
+#  define ET_DYN 3
+#  define ET_CORE 4
+#  define EM_386 3
+#  define EM_SPARC 2
+#  define EM_PPC 20
 #else
-#include <elf.h>
+#  include <elf.h>
 #endif
 #if defined(__sun)
-#include <sys/link.h> // For dynamic section information
+#  include <sys/link.h> // For dynamic section information
 #endif
 #ifdef _SCO_DS
-#include <link.h> // For DT_SONAME etc.
+#  include <link.h> // For DT_SONAME etc.
 #endif
 #ifndef DT_RUNPATH
-#define DT_RUNPATH 29
+#  define DT_RUNPATH 29
 #endif
 
 // Low-level byte swapping implementation.
@@ -108,7 +109,7 @@ public:
   };
 
   // Construct and take ownership of the file stream object.
-  cmELFInternal(cmELF* external, CM_AUTO_PTR<cmsys::ifstream>& fin,
+  cmELFInternal(cmELF* external, std::unique_ptr<cmsys::ifstream>& fin,
                 ByteOrderType order)
     : External(external)
     , Stream(*fin.release())
@@ -162,6 +163,7 @@ public:
 
   // Return the recorded ELF type.
   cmELF::FileType GetFileType() const { return this->ELFType; }
+
 protected:
   // Data common to all ELF class implementations.
 
@@ -231,27 +233,27 @@ public:
   typedef typename Types::tagtype tagtype;
 
   // Construct with a stream and byte swap indicator.
-  cmELFInternalImpl(cmELF* external, CM_AUTO_PTR<cmsys::ifstream>& fin,
+  cmELFInternalImpl(cmELF* external, std::unique_ptr<cmsys::ifstream>& fin,
                     ByteOrderType order);
 
   // Return the number of sections as specified by the ELF header.
-  unsigned int GetNumberOfSections() const CM_OVERRIDE
+  unsigned int GetNumberOfSections() const override
   {
     return static_cast<unsigned int>(this->ELFHeader.e_shnum);
   }
 
   // Get the file position of a dynamic section entry.
-  unsigned long GetDynamicEntryPosition(int j) CM_OVERRIDE;
+  unsigned long GetDynamicEntryPosition(int j) override;
 
-  cmELF::DynamicEntryList GetDynamicEntries() CM_OVERRIDE;
-  std::vector<char> EncodeDynamicEntries(const cmELF::DynamicEntryList&)
-    CM_OVERRIDE;
+  cmELF::DynamicEntryList GetDynamicEntries() override;
+  std::vector<char> EncodeDynamicEntries(
+    const cmELF::DynamicEntryList&) override;
 
   // Lookup a string from the dynamic section with the given tag.
-  StringEntry const* GetDynamicSectionString(unsigned int tag) CM_OVERRIDE;
+  StringEntry const* GetDynamicSectionString(unsigned int tag) override;
 
   // Print information about the ELF file.
-  void PrintInfo(std::ostream& os) const CM_OVERRIDE
+  void PrintInfo(std::ostream& os) const override
   {
     os << "ELF " << Types::GetName();
     if (this->ByteOrder == ByteOrderMSB) {
@@ -424,9 +426,8 @@ private:
 };
 
 template <class Types>
-cmELFInternalImpl<Types>::cmELFInternalImpl(cmELF* external,
-                                            CM_AUTO_PTR<cmsys::ifstream>& fin,
-                                            ByteOrderType order)
+cmELFInternalImpl<Types>::cmELFInternalImpl(
+  cmELF* external, std::unique_ptr<cmsys::ifstream>& fin, ByteOrderType order)
   : cmELFInternal(external, fin, order)
 {
   // Read the main header.
@@ -547,12 +548,8 @@ cmELF::DynamicEntryList cmELFInternalImpl<Types>::GetDynamicEntries()
 
   // Copy into public array
   result.reserve(this->DynamicSectionEntries.size());
-  for (typename std::vector<ELF_Dyn>::iterator di =
-         this->DynamicSectionEntries.begin();
-       di != this->DynamicSectionEntries.end(); ++di) {
-    ELF_Dyn& dyn = *di;
-    result.push_back(
-      std::pair<unsigned long, unsigned long>(dyn.d_tag, dyn.d_un.d_val));
+  for (ELF_Dyn& dyn : this->DynamicSectionEntries) {
+    result.emplace_back(dyn.d_tag, dyn.d_un.d_val);
   }
 
   return result;
@@ -565,19 +562,18 @@ std::vector<char> cmELFInternalImpl<Types>::EncodeDynamicEntries(
   std::vector<char> result;
   result.reserve(sizeof(ELF_Dyn) * entries.size());
 
-  for (cmELF::DynamicEntryList::const_iterator it = entries.begin();
-       it != entries.end(); it++) {
+  for (auto const& entry : entries) {
     // Store the entry in an ELF_Dyn, byteswap it, then serialize to chars
     ELF_Dyn dyn;
-    dyn.d_tag = static_cast<tagtype>(it->first);
-    dyn.d_un.d_val = static_cast<tagtype>(it->second);
+    dyn.d_tag = static_cast<tagtype>(entry.first);
+    dyn.d_un.d_val = static_cast<tagtype>(entry.second);
 
     if (this->NeedSwap) {
       ByteSwap(dyn);
     }
 
     char* pdyn = reinterpret_cast<char*>(&dyn);
-    result.insert(result.end(), pdyn, pdyn + sizeof(ELF_Dyn));
+    cmAppend(result, pdyn, pdyn + sizeof(ELF_Dyn));
   }
 
   return result;
@@ -594,7 +590,7 @@ cmELF::StringEntry const* cmELFInternalImpl<Types>::GetDynamicSectionString(
     if (dssi->second.Position > 0) {
       return &dssi->second;
     }
-    return CM_NULLPTR;
+    return nullptr;
   }
 
   // Create an entry for this tag.  Assume it is missing until found.
@@ -605,14 +601,14 @@ cmELF::StringEntry const* cmELFInternalImpl<Types>::GetDynamicSectionString(
 
   // Try reading the dynamic section.
   if (!this->LoadDynamicSection()) {
-    return CM_NULLPTR;
+    return nullptr;
   }
 
   // Get the string table referenced by the DYNAMIC section.
   ELF_Shdr const& sec = this->SectionHeaders[this->DynamicSectionIndex];
   if (sec.sh_link >= this->SectionHeaders.size()) {
     this->SetErrorMessage("Section DYNAMIC has invalid string table index.");
-    return CM_NULLPTR;
+    return nullptr;
   }
   ELF_Shdr const& strtab = this->SectionHeaders[sec.sh_link];
 
@@ -627,7 +623,7 @@ cmELF::StringEntry const* cmELFInternalImpl<Types>::GetDynamicSectionString(
       if (dyn.d_un.d_val >= strtab.sh_size) {
         this->SetErrorMessage("Section DYNAMIC references string beyond "
                               "the end of its string section.");
-        return CM_NULLPTR;
+        return nullptr;
       }
 
       // Seek to the position reported by the entry.
@@ -656,7 +652,7 @@ cmELF::StringEntry const* cmELFInternalImpl<Types>::GetDynamicSectionString(
       if (!this->Stream) {
         this->SetErrorMessage("Dynamic section specifies unreadable RPATH.");
         se.Value = "";
-        return CM_NULLPTR;
+        return nullptr;
       }
 
       // The value has been read successfully.  Report it.
@@ -667,7 +663,7 @@ cmELF::StringEntry const* cmELFInternalImpl<Types>::GetDynamicSectionString(
       return &se;
     }
   }
-  return CM_NULLPTR;
+  return nullptr;
 }
 
 //============================================================================
@@ -683,13 +679,13 @@ const long cmELF::TagMipsRldMapRel = 0;
 #endif
 
 cmELF::cmELF(const char* fname)
-  : Internal(CM_NULLPTR)
+  : Internal(nullptr)
 {
   // Try to open the file.
-  CM_AUTO_PTR<cmsys::ifstream> fin(new cmsys::ifstream(fname));
+  std::unique_ptr<cmsys::ifstream> fin(new cmsys::ifstream(fname));
 
   // Quit now if the file could not be opened.
-  if (!fin.get() || !*fin) {
+  if (!fin || !*fin) {
     this->ErrorMessage = "Error opening input file.";
     return;
   }
@@ -811,7 +807,7 @@ cmELF::StringEntry const* cmELF::GetSOName()
       this->Internal->GetFileType() == cmELF::FileTypeSharedLibrary) {
     return this->Internal->GetSOName();
   }
-  return CM_NULLPTR;
+  return nullptr;
 }
 
 cmELF::StringEntry const* cmELF::GetRPath()
@@ -821,7 +817,7 @@ cmELF::StringEntry const* cmELF::GetRPath()
        this->Internal->GetFileType() == cmELF::FileTypeSharedLibrary)) {
     return this->Internal->GetRPath();
   }
-  return CM_NULLPTR;
+  return nullptr;
 }
 
 cmELF::StringEntry const* cmELF::GetRunPath()
@@ -831,7 +827,7 @@ cmELF::StringEntry const* cmELF::GetRunPath()
        this->Internal->GetFileType() == cmELF::FileTypeSharedLibrary)) {
     return this->Internal->GetRunPath();
   }
-  return CM_NULLPTR;
+  return nullptr;
 }
 
 void cmELF::PrintInfo(std::ostream& os) const

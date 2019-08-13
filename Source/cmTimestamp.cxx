@@ -2,7 +2,6 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmTimestamp.h"
 
-#include "cmConfigure.h"
 #include <cstring>
 #include <sstream>
 #include <stdlib.h>
@@ -12,7 +11,7 @@
 std::string cmTimestamp::CurrentTime(const std::string& formatString,
                                      bool utcFlag)
 {
-  time_t currentTimeT = time(CM_NULLPTR);
+  time_t currentTimeT = time(nullptr);
   std::string source_date_epoch;
   cmSystemTools::GetEnv("SOURCE_DATE_EPOCH", source_date_epoch);
   if (!source_date_epoch.empty()) {
@@ -34,11 +33,14 @@ std::string cmTimestamp::FileModificationTime(const char* path,
                                               const std::string& formatString,
                                               bool utcFlag)
 {
-  if (!cmsys::SystemTools::FileExists(path)) {
+  std::string real_path =
+    cmSystemTools::GetRealPathResolvingWindowsSubst(path);
+
+  if (!cmsys::SystemTools::FileExists(real_path)) {
     return std::string();
   }
 
-  time_t mtime = cmsys::SystemTools::ModifiedTime(path);
+  time_t mtime = cmsys::SystemTools::ModifiedTime(real_path);
   return CreateTimestampFromTimeT(mtime, formatString, utcFlag);
 }
 
@@ -56,14 +58,14 @@ std::string cmTimestamp::CreateTimestampFromTimeT(time_t timeT,
   struct tm timeStruct;
   memset(&timeStruct, 0, sizeof(timeStruct));
 
-  struct tm* ptr = (struct tm*)CM_NULLPTR;
+  struct tm* ptr = nullptr;
   if (utcFlag) {
     ptr = gmtime(&timeT);
   } else {
     ptr = localtime(&timeT);
   }
 
-  if (ptr == CM_NULLPTR) {
+  if (ptr == nullptr) {
     return std::string();
   }
 
@@ -94,7 +96,7 @@ time_t cmTimestamp::CreateUtcTimeTFromTm(struct tm& tm) const
   // From Linux timegm() manpage.
 
   std::string tz_old;
-  cmSystemTools::GetEnv("TZ", tz_old);
+  bool const tz_was_set = cmSystemTools::GetEnv("TZ", tz_old);
   tz_old = "TZ=" + tz_old;
 
   // The standard says that "TZ=" or "TZ=[UNRECOGNIZED_TZ]" means UTC.
@@ -107,7 +109,17 @@ time_t cmTimestamp::CreateUtcTimeTFromTm(struct tm& tm) const
 
   time_t result = mktime(&tm);
 
+#  ifdef CMAKE_BUILD_WITH_CMAKE
+  if (tz_was_set) {
+    cmSystemTools::PutEnv(tz_old);
+  } else {
+    cmSystemTools::UnsetEnv("TZ");
+  }
+#  else
+  // No UnsetEnv during bootstrap.  This is good enough for CMake itself.
   cmSystemTools::PutEnv(tz_old);
+  static_cast<void>(tz_was_set);
+#  endif
 
   tzset();
 
@@ -124,7 +136,9 @@ std::string cmTimestamp::AddTimestampComponent(char flag,
 
   switch (flag) {
     case 'a':
+    case 'A':
     case 'b':
+    case 'B':
     case 'd':
     case 'H':
     case 'I':
@@ -150,7 +164,7 @@ std::string cmTimestamp::AddTimestampComponent(char flag,
       if (unixEpoch == -1) {
         cmSystemTools::Error(
           "Error generating UNIX epoch in "
-          "STRING(TIMESTAMP ...). Please, file a bug report aginst CMake");
+          "STRING(TIMESTAMP ...). Please, file a bug report against CMake");
         return std::string();
       }
 

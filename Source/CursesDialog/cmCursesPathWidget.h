@@ -3,7 +3,7 @@
 #ifndef cmCursesPathWidget_h
 #define cmCursesPathWidget_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmCursesStandardIncludes.h"
 #include "cmCursesStringWidget.h"
@@ -14,18 +14,19 @@ class cmCursesMainForm;
 
 class cmCursesPathWidget : public cmCursesStringWidget
 {
-  CM_DISABLE_COPY(cmCursesPathWidget)
-
 public:
   cmCursesPathWidget(int width, int height, int left, int top);
+
+  cmCursesPathWidget(cmCursesPathWidget const&) = delete;
+  cmCursesPathWidget& operator=(cmCursesPathWidget const&) = delete;
 
   /**
    * This method is called when different keys are pressed. The
    * subclass can have a special implementation handler for this.
    */
-  void OnTab(cmCursesMainForm* fm, WINDOW* w) CM_OVERRIDE;
-  void OnReturn(cmCursesMainForm* fm, WINDOW* w) CM_OVERRIDE;
-  void OnType(int& key, cmCursesMainForm* fm, WINDOW* w) CM_OVERRIDE;
+  void OnTab(cmCursesMainForm* fm, WINDOW* w) override;
+  void OnReturn(cmCursesMainForm* fm, WINDOW* w) override;
+  void OnType(int& key, cmCursesMainForm* fm, WINDOW* w) override;
 
 protected:
   std::string LastString;

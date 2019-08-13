@@ -3,7 +3,7 @@
 #ifndef cmOrderDirectories_h
 #define cmOrderDirectories_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmsys/RegularExpression.hxx"
 #include <map>
@@ -25,8 +25,10 @@ public:
   cmOrderDirectories(cmGlobalGenerator* gg, cmGeneratorTarget const* target,
                      const char* purpose);
   ~cmOrderDirectories();
+  cmOrderDirectories(const cmOrderDirectories&) = delete;
+  cmOrderDirectories& operator=(const cmOrderDirectories&) = delete;
   void AddRuntimeLibrary(std::string const& fullPath,
-                         const char* soname = CM_NULLPTR);
+                         const char* soname = nullptr);
   void AddLinkLibrary(std::string const& fullPath);
   void AddUserDirectories(std::vector<std::string> const& extra);
   void AddLanguageDirectories(std::vector<std::string> const& dirs);

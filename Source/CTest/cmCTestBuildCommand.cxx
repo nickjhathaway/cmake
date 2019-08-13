@@ -4,9 +4,9 @@
 
 #include "cmCTest.h"
 #include "cmCTestBuildHandler.h"
-#include "cmCTestGenericHandler.h"
 #include "cmGlobalGenerator.h"
 #include "cmMakefile.h"
+#include "cmMessageType.h"
 #include "cmSystemTools.h"
 #include "cmake.h"
 
@@ -17,14 +17,14 @@ class cmExecutionStatus;
 
 cmCTestBuildCommand::cmCTestBuildCommand()
 {
-  this->GlobalGenerator = CM_NULLPTR;
+  this->GlobalGenerator = nullptr;
   this->Arguments[ctb_NUMBER_ERRORS] = "NUMBER_ERRORS";
   this->Arguments[ctb_NUMBER_WARNINGS] = "NUMBER_WARNINGS";
   this->Arguments[ctb_TARGET] = "TARGET";
   this->Arguments[ctb_CONFIGURATION] = "CONFIGURATION";
   this->Arguments[ctb_FLAGS] = "FLAGS";
   this->Arguments[ctb_PROJECT_NAME] = "PROJECT_NAME";
-  this->Arguments[ctb_LAST] = CM_NULLPTR;
+  this->Arguments[ctb_LAST] = nullptr;
   this->Last = ctb_LAST;
 }
 
@@ -32,18 +32,16 @@ cmCTestBuildCommand::~cmCTestBuildCommand()
 {
   if (this->GlobalGenerator) {
     delete this->GlobalGenerator;
-    this->GlobalGenerator = CM_NULLPTR;
+    this->GlobalGenerator = nullptr;
   }
 }
 
 cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
 {
-  cmCTestGenericHandler* handler = this->CTest->GetInitializedHandler("build");
-  if (!handler) {
-    this->SetError("internal CTest error. Cannot instantiate build handler");
-    return CM_NULLPTR;
-  }
-  this->Handler = (cmCTestBuildHandler*)handler;
+  cmCTestBuildHandler* handler = this->CTest->GetBuildHandler();
+  handler->Initialize();
+
+  this->Handler = handler;
 
   const char* ctestBuildCommand =
     this->Makefile->GetDefinition("CTEST_BUILD_COMMAND");
@@ -53,10 +51,6 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
   } else {
     const char* cmakeGeneratorName =
       this->Makefile->GetDefinition("CTEST_CMAKE_GENERATOR");
-    const char* cmakeProjectName =
-      (this->Values[ctb_PROJECT_NAME] && *this->Values[ctb_PROJECT_NAME])
-      ? this->Values[ctb_PROJECT_NAME]
-      : this->Makefile->GetDefinition("CTEST_PROJECT_NAME");
 
     // Build configuration is determined by: CONFIGURATION argument,
     // or CTEST_BUILD_CONFIGURATION script variable, or
@@ -81,15 +75,14 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
       ? this->Values[ctb_TARGET]
       : this->Makefile->GetDefinition("CTEST_BUILD_TARGET");
 
-    if (cmakeGeneratorName && *cmakeGeneratorName && cmakeProjectName &&
-        *cmakeProjectName) {
+    if (cmakeGeneratorName && *cmakeGeneratorName) {
       if (!cmakeBuildConfiguration) {
         cmakeBuildConfiguration = "Release";
       }
       if (this->GlobalGenerator) {
         if (this->GlobalGenerator->GetName() != cmakeGeneratorName) {
           delete this->GlobalGenerator;
-          this->GlobalGenerator = CM_NULLPTR;
+          this->GlobalGenerator = nullptr;
         }
       }
       if (!this->GlobalGenerator) {
@@ -100,13 +93,13 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
           std::string e = "could not create generator named \"";
           e += cmakeGeneratorName;
           e += "\"";
-          this->Makefile->IssueMessage(cmake::FATAL_ERROR, e);
+          this->Makefile->IssueMessage(MessageType::FATAL_ERROR, e);
           cmSystemTools::SetFatalErrorOccured();
-          return CM_NULLPTR;
+          return nullptr;
         }
       }
       if (strlen(cmakeBuildConfiguration) == 0) {
-        const char* config = CM_NULLPTR;
+        const char* config = nullptr;
 #ifdef CMAKE_INTDIR
         config = CMAKE_INTDIR;
 #endif
@@ -132,18 +125,11 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
       /* clang-format off */
       ostr << "has no project to build. If this is a "
         "\"built with CMake\" project, verify that CTEST_CMAKE_GENERATOR "
-        "and CTEST_PROJECT_NAME are set."
-        "\n"
-        "CTEST_PROJECT_NAME is usually set in CTestConfig.cmake. Verify "
-        "that CTestConfig.cmake exists, or CTEST_PROJECT_NAME "
-        "is set in the script, or PROJECT_NAME is passed as an argument "
-        "to ctest_build."
-        "\n"
-        "Alternatively, set CTEST_BUILD_COMMAND to build the project "
+        "is set. Otherwise, set CTEST_BUILD_COMMAND to build the project "
         "with a custom command line.";
       /* clang-format on */
       this->SetError(ostr.str());
-      return CM_NULLPTR;
+      return nullptr;
     }
   }
 
@@ -151,6 +137,12 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
         this->Makefile->GetDefinition("CTEST_USE_LAUNCHERS")) {
     this->CTest->SetCTestConfiguration("UseLaunchers", useLaunchers,
                                        this->Quiet);
+  }
+
+  if (const char* labelsForSubprojects =
+        this->Makefile->GetDefinition("CTEST_LABELS_FOR_SUBPROJECTS")) {
+    this->CTest->SetCTestConfiguration("LabelsForSubprojects",
+                                       labelsForSubprojects, this->Quiet);
   }
 
   handler->SetQuiet(this->Quiet);

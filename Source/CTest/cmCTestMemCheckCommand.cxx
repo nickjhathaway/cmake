@@ -7,21 +7,20 @@
 #include <vector>
 
 #include "cmCTest.h"
-#include "cmCTestGenericHandler.h"
 #include "cmCTestMemCheckHandler.h"
 #include "cmMakefile.h"
 
 cmCTestMemCheckCommand::cmCTestMemCheckCommand()
 {
   this->Arguments[ctm_DEFECT_COUNT] = "DEFECT_COUNT";
-  this->Arguments[ctm_LAST] = CM_NULLPTR;
+  this->Arguments[ctm_LAST] = nullptr;
   this->Last = ctm_LAST;
 }
 
 cmCTestGenericHandler* cmCTestMemCheckCommand::InitializeActualHandler()
 {
-  cmCTestGenericHandler* handler =
-    this->CTest->GetInitializedHandler("memcheck");
+  cmCTestMemCheckHandler* handler = this->CTest->GetMemCheckHandler();
+  handler->Initialize();
 
   this->CTest->SetCTestConfigurationFromCMakeVariable(
     this->Makefile, "MemoryCheckType", "CTEST_MEMORYCHECK_TYPE", this->Quiet);

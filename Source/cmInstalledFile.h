@@ -6,9 +6,9 @@
 #include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmGeneratorExpression.h"
-#include "cm_auto_ptr.hxx"
 
 #include <map>
+#include <memory> // IWYU pragma: keep
 #include <string>
 #include <vector>
 
@@ -22,7 +22,7 @@ class cmMakefile;
 class cmInstalledFile
 {
 public:
-  typedef CM_AUTO_PTR<cmCompiledGeneratorExpression>
+  typedef std::unique_ptr<cmCompiledGeneratorExpression>
     CompiledGeneratorExpressionPtrType;
 
   typedef std::vector<cmCompiledGeneratorExpression*> ExpressionVectorType;
@@ -32,6 +32,9 @@ public:
     Property();
     ~Property();
 
+    Property(const Property&) = delete;
+    Property& operator=(const Property&) = delete;
+
     ExpressionVectorType ValueExpressions;
   };
 
@@ -40,6 +43,9 @@ public:
   cmInstalledFile();
 
   ~cmInstalledFile();
+
+  cmInstalledFile(const cmInstalledFile&) = delete;
+  cmInstalledFile& operator=(const cmInstalledFile&) = delete;
 
   void RemoveProperty(const std::string& prop);
 
@@ -68,7 +74,7 @@ public:
 
 private:
   std::string Name;
-  cmCompiledGeneratorExpression* NameExpression;
+  cmCompiledGeneratorExpression* NameExpression = nullptr;
   PropertyMapType Properties;
 };
 

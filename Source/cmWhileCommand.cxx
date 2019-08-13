@@ -6,9 +6,10 @@
 #include "cmExecutionStatus.h"
 #include "cmExpandedCommandArgument.h"
 #include "cmMakefile.h"
+#include "cmMessageType.h"
 #include "cmSystemTools.h"
-#include "cm_auto_ptr.hxx"
-#include "cmake.h"
+
+#include <memory> // IWYU pragma: keep
 
 cmWhileFunctionBlocker::cmWhileFunctionBlocker(cmMakefile* mf)
   : Makefile(mf)
@@ -27,15 +28,16 @@ bool cmWhileFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
                                                cmExecutionStatus& inStatus)
 {
   // at end of for each execute recorded commands
-  if (!cmSystemTools::Strucmp(lff.Name.c_str(), "while")) {
+  if (lff.Name.Lower == "while") {
     // record the number of while commands past this one
     this->Depth++;
-  } else if (!cmSystemTools::Strucmp(lff.Name.c_str(), "endwhile")) {
+  } else if (lff.Name.Lower == "endwhile") {
     // if this is the endwhile for this while loop then execute
     if (!this->Depth) {
       // Remove the function blocker for this scope or bail.
-      CM_AUTO_PTR<cmFunctionBlocker> fb(mf.RemoveFunctionBlocker(this, lff));
-      if (!fb.get()) {
+      std::unique_ptr<cmFunctionBlocker> fb(
+        mf.RemoveFunctionBlocker(this, lff));
+      if (!fb) {
         return false;
       }
 
@@ -43,7 +45,7 @@ bool cmWhileFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
 
       std::vector<cmExpandedCommandArgument> expandedArguments;
       mf.ExpandArguments(this->Args, expandedArguments);
-      cmake::MessageType messageType;
+      MessageType messageType;
 
       cmListFileContext execContext = this->GetStartingContext();
 
@@ -60,27 +62,26 @@ bool cmWhileFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
       while (isTrue) {
         if (!errorString.empty()) {
           std::string err = "had incorrect arguments: ";
-          unsigned int i;
-          for (i = 0; i < this->Args.size(); ++i) {
-            err += (this->Args[i].Delim ? "\"" : "");
-            err += this->Args[i].Value;
-            err += (this->Args[i].Delim ? "\"" : "");
+          for (cmListFileArgument const& arg : this->Args) {
+            err += (arg.Delim ? "\"" : "");
+            err += arg.Value;
+            err += (arg.Delim ? "\"" : "");
             err += " ";
           }
           err += "(";
           err += errorString;
           err += ").";
           mf.IssueMessage(messageType, err);
-          if (messageType == cmake::FATAL_ERROR) {
+          if (messageType == MessageType::FATAL_ERROR) {
             cmSystemTools::SetFatalErrorOccured();
             return true;
           }
         }
 
         // Invoke all the functions that were collected in the block.
-        for (unsigned int c = 0; c < this->Functions.size(); ++c) {
+        for (cmListFileFunction const& fn : this->Functions) {
           cmExecutionStatus status;
-          mf.ExecuteCommand(this->Functions[c], status);
+          mf.ExecuteCommand(fn, status);
           if (status.GetReturnInvoked()) {
             inStatus.SetReturnInvoked();
             return true;
@@ -116,7 +117,7 @@ bool cmWhileFunctionBlocker::IsFunctionBlocked(const cmListFileFunction& lff,
 bool cmWhileFunctionBlocker::ShouldRemove(const cmListFileFunction& lff,
                                           cmMakefile&)
 {
-  if (!cmSystemTools::Strucmp(lff.Name.c_str(), "endwhile")) {
+  if (lff.Name.Lower == "endwhile") {
     // if the endwhile has arguments, then make sure
     // they match the arguments of the matching while
     if (lff.Arguments.empty() || lff.Arguments == this->Args) {

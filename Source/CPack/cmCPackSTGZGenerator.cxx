@@ -13,13 +13,9 @@
 #include "cmSystemTools.h"
 #include "cm_sys_stat.h"
 
-cmCPackSTGZGenerator::cmCPackSTGZGenerator()
-{
-}
+cmCPackSTGZGenerator::cmCPackSTGZGenerator() = default;
 
-cmCPackSTGZGenerator::~cmCPackSTGZGenerator()
-{
-}
+cmCPackSTGZGenerator::~cmCPackSTGZGenerator() = default;
 
 int cmCPackSTGZGenerator::InitializeInternal()
 {
@@ -48,9 +44,8 @@ int cmCPackSTGZGenerator::PackageFiles()
    * have generated several packages (component packaging)
    * so we must iterate over generated packages.
    */
-  for (std::vector<std::string>::iterator it = packageFileNames.begin();
-       it != packageFileNames.end(); ++it) {
-    retval &= cmSystemTools::SetPermissions((*it).c_str(),
+  for (std::string const& pfn : packageFileNames) {
+    retval &= cmSystemTools::SetPermissions(pfn.c_str(),
 #if defined(_MSC_VER) || defined(__MINGW32__)
                                             S_IREAD | S_IWRITE | S_IEXEC
 #else
@@ -58,7 +53,7 @@ int cmCPackSTGZGenerator::PackageFiles()
                                               S_IRGRP | S_IWGRP | S_IXGRP |
                                               S_IROTH | S_IWOTH | S_IXOTH
 #endif
-                                            );
+    );
   }
   return retval;
 }
@@ -102,8 +97,8 @@ int cmCPackSTGZGenerator::GenerateHeader(std::ostream* os)
     ++ptr;
   }
   counter++;
-  cmCPackLogger(cmCPackLog::LOG_DEBUG, "Number of lines: " << counter
-                                                           << std::endl);
+  cmCPackLogger(cmCPackLog::LOG_DEBUG,
+                "Number of lines: " << counter << std::endl);
   char buffer[1024];
   sprintf(buffer, "%d", counter);
   cmSystemTools::ReplaceString(res, headerLengthTag, buffer);

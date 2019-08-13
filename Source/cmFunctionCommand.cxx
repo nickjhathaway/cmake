@@ -8,22 +8,17 @@
 #include "cmExecutionStatus.h"
 #include "cmMakefile.h"
 #include "cmPolicies.h"
+#include "cmRange.h"
 #include "cmState.h"
-#include "cmSystemTools.h"
 
 // define the class for function commands
 class cmFunctionHelperCommand : public cmCommand
 {
 public:
-  cmFunctionHelperCommand() {}
-
-  ///! clean up any memory allocated by the function
-  ~cmFunctionHelperCommand() CM_OVERRIDE {}
-
   /**
    * This is a virtual constructor for the command.
    */
-  cmCommand* Clone() CM_OVERRIDE
+  cmCommand* Clone() override
   {
     cmFunctionHelperCommand* newC = new cmFunctionHelperCommand;
     // we must copy when we clone
@@ -39,10 +34,10 @@ public:
    * the CMakeLists.txt file.
    */
   bool InvokeInitialPass(const std::vector<cmListFileArgument>& args,
-                         cmExecutionStatus&) CM_OVERRIDE;
+                         cmExecutionStatus&) override;
 
   bool InitialPass(std::vector<std::string> const&,
-                   cmExecutionStatus&) CM_OVERRIDE
+                   cmExecutionStatus&) override
   {
     return false;
   }
@@ -104,9 +99,9 @@ bool cmFunctionHelperCommand::InvokeInitialPass(
 
   // Invoke all the functions that were collected in the block.
   // for each function
-  for (unsigned int c = 0; c < this->Functions.size(); ++c) {
+  for (cmListFileFunction const& func : this->Functions) {
     cmExecutionStatus status;
-    if (!this->Makefile->ExecuteCommand(this->Functions[c], status) ||
+    if (!this->Makefile->ExecuteCommand(func, status) ||
         status.GetNestedError()) {
       // The error message should have already included the call stack
       // so we do not need to report an error here.
@@ -128,9 +123,9 @@ bool cmFunctionFunctionBlocker::IsFunctionBlocked(
 {
   // record commands until we hit the ENDFUNCTION
   // at the ENDFUNCTION call we shift gears and start looking for invocations
-  if (!cmSystemTools::Strucmp(lff.Name.c_str(), "function")) {
+  if (lff.Name.Lower == "function") {
     this->Depth++;
-  } else if (!cmSystemTools::Strucmp(lff.Name.c_str(), "endfunction")) {
+  } else if (lff.Name.Lower == "endfunction") {
     // if this is the endfunction for this function then execute
     if (!this->Depth) {
       // create a new command and add it to cmake
@@ -157,7 +152,7 @@ bool cmFunctionFunctionBlocker::IsFunctionBlocked(
 bool cmFunctionFunctionBlocker::ShouldRemove(const cmListFileFunction& lff,
                                              cmMakefile& mf)
 {
-  if (!cmSystemTools::Strucmp(lff.Name.c_str(), "endfunction")) {
+  if (lff.Name.Lower == "endfunction") {
     std::vector<std::string> expandedArguments;
     mf.ExpandArguments(lff.Arguments, expandedArguments,
                        this->GetStartingContext().FilePath.c_str());
@@ -182,7 +177,7 @@ bool cmFunctionCommand::InitialPass(std::vector<std::string> const& args,
 
   // create a function blocker
   cmFunctionFunctionBlocker* f = new cmFunctionFunctionBlocker();
-  f->Args.insert(f->Args.end(), args.begin(), args.end());
+  cmAppend(f->Args, args);
   this->Makefile->AddFunctionBlocker(f);
   return true;
 }

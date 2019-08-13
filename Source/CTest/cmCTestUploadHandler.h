@@ -3,10 +3,12 @@
 #ifndef cmCTestUploadHandler_h
 #define cmCTestUploadHandler_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
-#include "cmCTest.h"
 #include "cmCTestGenericHandler.h"
+
+#include <set>
+#include <string>
 
 /** \class cmCTestUploadHandler
  * \brief Helper class for CTest
@@ -20,20 +22,19 @@ public:
   typedef cmCTestGenericHandler Superclass;
 
   cmCTestUploadHandler();
-  ~cmCTestUploadHandler() CM_OVERRIDE {}
 
   /*
    * The main entry point for this class
    */
-  int ProcessHandler() CM_OVERRIDE;
+  int ProcessHandler() override;
 
-  void Initialize() CM_OVERRIDE;
+  void Initialize() override;
 
   /** Specify a set of files to submit.  */
-  void SetFiles(cmCTest::SetOfStrings const& files);
+  void SetFiles(std::set<std::string> const& files);
 
 private:
-  cmCTest::SetOfStrings Files;
+  std::set<std::string> Files;
 };
 
 #endif

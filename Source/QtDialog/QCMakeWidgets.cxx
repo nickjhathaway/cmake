@@ -7,10 +7,11 @@
 #include <QFileInfo>
 #include <QResizeEvent>
 #include <QToolButton>
+#include <utility>
 
-QCMakeFileEditor::QCMakeFileEditor(QWidget* p, const QString& var)
+QCMakeFileEditor::QCMakeFileEditor(QWidget* p, QString var)
   : QLineEdit(p)
-  , Variable(var)
+  , Variable(std::move(var))
 {
   this->ToolButton = new QToolButton(this);
   this->ToolButton->setText("...");
@@ -57,7 +58,7 @@ void QCMakeFilePathEditor::chooseFile()
   emit this->fileDialogExists(true);
   path =
     QFileDialog::getOpenFileName(this, title, info.absolutePath(), QString(),
-                                 CM_NULLPTR, QFileDialog::DontResolveSymlinks);
+                                 nullptr, QFileDialog::DontResolveSymlinks);
   emit this->fileDialogExists(false);
 
   if (!path.isEmpty()) {
@@ -89,7 +90,7 @@ void QCMakePathEditor::chooseFile()
 // use same QDirModel for all completers
 static QDirModel* fileDirModel()
 {
-  static QDirModel* m = CM_NULLPTR;
+  static QDirModel* m = nullptr;
   if (!m) {
     m = new QDirModel();
   }
@@ -97,7 +98,7 @@ static QDirModel* fileDirModel()
 }
 static QDirModel* pathDirModel()
 {
-  static QDirModel* m = CM_NULLPTR;
+  static QDirModel* m = nullptr;
   if (!m) {
     m = new QDirModel();
     m->setFilter(QDir::AllDirs | QDir::Drives | QDir::NoDotAndDotDot);
