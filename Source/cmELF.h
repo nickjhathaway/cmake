@@ -3,7 +3,7 @@
 #ifndef cmELF_h
 #define cmELF_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include <iosfwd>
 #include <string>
@@ -11,7 +11,7 @@
 #include <vector>
 
 #if !defined(CMAKE_USE_ELF_PARSER)
-#error "This file may be included only if CMAKE_USE_ELF_PARSER is enabled."
+#  error "This file may be included only if CMAKE_USE_ELF_PARSER is enabled."
 #endif
 
 class cmELFInternal;
@@ -28,11 +28,14 @@ public:
   /** Destruct.   */
   ~cmELF();
 
+  cmELF(const cmELF&) = delete;
+  cmELF& operator=(const cmELF&) = delete;
+
   /** Get the error message if any.  */
   std::string const& GetErrorMessage() const { return this->ErrorMessage; }
 
   /** Boolean conversion.  True if the ELF file is valid.  */
-  operator bool() const { return this->Valid(); }
+  explicit operator bool() const { return this->Valid(); }
 
   /** Enumeration of ELF file types.  */
   enum FileType
@@ -64,7 +67,7 @@ public:
   };
 
   /** Represent entire dynamic section header */
-  typedef std::vector<std::pair<long, unsigned long> > DynamicEntryList;
+  typedef std::vector<std::pair<long, unsigned long>> DynamicEntryList;
 
   /** Get the type of the file opened.  */
   FileType GetFileType() const;

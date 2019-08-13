@@ -3,9 +3,10 @@
 #ifndef cmInstallTargetGenerator_h
 #define cmInstallTargetGenerator_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmInstallGenerator.h"
+#include "cmListFileCache.h"
 #include "cmScriptGenerator.h"
 
 #include <iosfwd>
@@ -21,12 +22,13 @@ class cmLocalGenerator;
 class cmInstallTargetGenerator : public cmInstallGenerator
 {
 public:
-  cmInstallTargetGenerator(std::string const& targetName, const char* dest,
-                           bool implib, const char* file_permissions,
-                           std::vector<std::string> const& configurations,
-                           const char* component, MessageLevel message,
-                           bool exclude_from_all, bool optional);
-  ~cmInstallTargetGenerator() CM_OVERRIDE;
+  cmInstallTargetGenerator(
+    std::string targetName, const char* dest, bool implib,
+    const char* file_permissions,
+    std::vector<std::string> const& configurations, const char* component,
+    MessageLevel message, bool exclude_from_all, bool optional,
+    cmListFileBacktrace backtrace = cmListFileBacktrace());
+  ~cmInstallTargetGenerator() override;
 
   /** Select the policy for installing shared library linkable name
       symlinks.  */
@@ -56,7 +58,7 @@ public:
                                         const std::string& config,
                                         NameType nameType = NameNormal);
 
-  void Compute(cmLocalGenerator* lg) CM_OVERRIDE;
+  bool Compute(cmLocalGenerator* lg) override;
 
   cmGeneratorTarget* GetTarget() const { return this->Target; }
 
@@ -64,10 +66,11 @@ public:
 
   std::string GetDestination(std::string const& config) const;
 
+  cmListFileBacktrace const& GetBacktrace() const { return this->Backtrace; }
+
 protected:
-  void GenerateScript(std::ostream& os) CM_OVERRIDE;
   void GenerateScriptForConfig(std::ostream& os, const std::string& config,
-                               Indent indent) CM_OVERRIDE;
+                               Indent indent) override;
   void GenerateScriptForConfigObjectLibrary(std::ostream& os,
                                             const std::string& config,
                                             Indent indent);
@@ -108,6 +111,7 @@ protected:
   NamelinkModeType NamelinkMode;
   bool ImportLibrary;
   bool Optional;
+  cmListFileBacktrace Backtrace;
 };
 
 #endif

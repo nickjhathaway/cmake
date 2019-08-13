@@ -3,16 +3,17 @@
 #ifndef cmCursesFilePathWidget_h
 #define cmCursesFilePathWidget_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmCursesPathWidget.h"
 
 class cmCursesFilePathWidget : public cmCursesPathWidget
 {
-  CM_DISABLE_COPY(cmCursesFilePathWidget)
-
 public:
   cmCursesFilePathWidget(int width, int height, int left, int top);
+
+  cmCursesFilePathWidget(cmCursesFilePathWidget const&) = delete;
+  cmCursesFilePathWidget& operator=(cmCursesFilePathWidget const&) = delete;
 };
 
 #endif // cmCursesFilePathWidget_h

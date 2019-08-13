@@ -8,6 +8,7 @@
 #include "cmInstalledFile.h"
 #include "cmListFileCache.h"
 #include "cmMakefile.h"
+#include "cmMessageType.h"
 #include "cmPolicies.h"
 #include "cmProperty.h"
 #include "cmPropertyDefinition.h"
@@ -206,7 +207,7 @@ bool cmGetPropertyCommand::HandleDirectoryMode()
     // Construct the directory name.  Interpret relative paths with
     // respect to the current directory.
     std::string dir = this->Name;
-    if (!cmSystemTools::FileIsFullPath(dir.c_str())) {
+    if (!cmSystemTools::FileIsFullPath(dir)) {
       dir = this->Makefile->GetCurrentSourceDirectory();
       dir += "/";
       dir += this->Name;
@@ -230,7 +231,7 @@ bool cmGetPropertyCommand::HandleDirectoryMode()
   if (this->PropertyName == "DEFINITIONS") {
     switch (mf->GetPolicyStatus(cmPolicies::CMP0059)) {
       case cmPolicies::WARN:
-        mf->IssueMessage(cmake::AUTHOR_WARNING,
+        mf->IssueMessage(MessageType::AUTHOR_WARNING,
                          cmPolicies::GetPolicyWarning(cmPolicies::CMP0059));
         CM_FALLTHROUGH;
       case cmPolicies::OLD:
@@ -258,9 +259,9 @@ bool cmGetPropertyCommand::HandleTargetMode()
       if (this->Makefile->IsAlias(this->Name)) {
         return this->StoreResult(target->GetName().c_str());
       }
-      return this->StoreResult(CM_NULLPTR);
+      return this->StoreResult(nullptr);
     }
-    const char* prop_cstr = CM_NULLPTR;
+    const char* prop_cstr = nullptr;
     cmListFileBacktrace bt = this->Makefile->GetBacktrace();
     cmMessenger* messenger = this->Makefile->GetMessenger();
     if (cmTargetPropertyComputer::PassesWhitelist(
@@ -333,7 +334,7 @@ bool cmGetPropertyCommand::HandleCacheMode()
     return false;
   }
 
-  const char* value = CM_NULLPTR;
+  const char* value = nullptr;
   if (this->Makefile->GetState()->GetCacheEntryValue(this->Name)) {
     value = this->Makefile->GetState()->GetCacheEntryProperty(
       this->Name, this->PropertyName);
@@ -357,7 +358,7 @@ bool cmGetPropertyCommand::HandleInstallMode()
     std::string value;
     bool isSet = file->GetProperty(this->PropertyName, value);
 
-    return this->StoreResult(isSet ? value.c_str() : CM_NULLPTR);
+    return this->StoreResult(isSet ? value.c_str() : nullptr);
   }
   std::ostringstream e;
   e << "given INSTALL name that could not be found or created: " << this->Name;

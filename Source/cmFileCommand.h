@@ -3,7 +3,7 @@
 #ifndef cmFileCommand_h
 #define cmFileCommand_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include <string>
 #include <vector>
@@ -22,14 +22,14 @@ public:
   /**
    * This is a virtual constructor for the command.
    */
-  cmCommand* Clone() CM_OVERRIDE { return new cmFileCommand; }
+  cmCommand* Clone() override { return new cmFileCommand; }
 
   /**
    * This is called when the command is first encountered in
    * the CMakeLists.txt file.
    */
   bool InitialPass(std::vector<std::string> const& args,
-                   cmExecutionStatus& status) CM_OVERRIDE;
+                   cmExecutionStatus& status) override;
 
 protected:
   bool HandleRename(std::vector<std::string> const& args);
@@ -39,6 +39,7 @@ protected:
   bool HandleHashCommand(std::vector<std::string> const& args);
   bool HandleStringsCommand(std::vector<std::string> const& args);
   bool HandleGlobCommand(std::vector<std::string> const& args, bool recurse);
+  bool HandleTouchCommand(std::vector<std::string> const& args, bool create);
   bool HandleMakeDirectoryCommand(std::vector<std::string> const& args);
 
   bool HandleRelativePathCommand(std::vector<std::string> const& args);
@@ -58,6 +59,9 @@ protected:
   bool HandleTimestampCommand(std::vector<std::string> const& args);
   bool HandleGenerateCommand(std::vector<std::string> const& args);
   bool HandleLockCommand(std::vector<std::string> const& args);
+  bool HandleSizeCommand(std::vector<std::string> const& args);
+  bool HandleReadSymlinkCommand(std::vector<std::string> const& args);
+  bool HandleCreateLinkCommand(std::vector<std::string> const& args);
 
 private:
   void AddEvaluationFile(const std::string& inputName,

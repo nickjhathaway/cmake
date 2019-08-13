@@ -3,7 +3,7 @@
 #ifndef cmCPackPropertiesGenerator_h
 #define cmCPackPropertiesGenerator_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmScriptGenerator.h"
 
@@ -20,16 +20,18 @@ class cmLocalGenerator;
  */
 class cmCPackPropertiesGenerator : public cmScriptGenerator
 {
-  CM_DISABLE_COPY(cmCPackPropertiesGenerator)
-
 public:
   cmCPackPropertiesGenerator(cmLocalGenerator* lg,
                              cmInstalledFile const& installedFile,
                              std::vector<std::string> const& configurations);
 
+  cmCPackPropertiesGenerator(cmCPackPropertiesGenerator const&) = delete;
+  cmCPackPropertiesGenerator& operator=(cmCPackPropertiesGenerator const&) =
+    delete;
+
 protected:
   void GenerateScriptForConfig(std::ostream& os, const std::string& config,
-                               Indent indent) CM_OVERRIDE;
+                               Indent indent) override;
 
   cmLocalGenerator* LG;
   cmInstalledFile const& InstalledFile;

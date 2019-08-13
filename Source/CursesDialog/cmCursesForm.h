@@ -3,19 +3,22 @@
 #ifndef cmCursesForm_h
 #define cmCursesForm_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmCursesStandardIncludes.h"
 
 #include "cmsys/FStream.hxx"
 
+#include <string>
+
 class cmCursesForm
 {
-  CM_DISABLE_COPY(cmCursesForm)
-
 public:
   cmCursesForm();
   virtual ~cmCursesForm();
+
+  cmCursesForm(cmCursesForm const&) = delete;
+  cmCursesForm& operator=(cmCursesForm const&) = delete;
 
   // Description:
   // Handle user input.
@@ -33,7 +36,7 @@ public:
   // Description:
   // During a CMake run, an error handle should add errors
   // to be displayed afterwards.
-  virtual void AddError(const char*, const char*) {}
+  virtual void AddError(const std::string&, const char*) {}
 
   // Description:
   // Turn debugging on. This will create ccmakelog.txt.

@@ -9,7 +9,7 @@ See documentation on `CMake Development`_ for more information.
 C++ Code Style
 ==============
 
-We use `clang-format`_ version **3.8** to define our style for C++ code in
+We use `clang-format`_ version **6.0** to define our style for C++ code in
 the CMake source tree.  See the `.clang-format`_ configuration file for our
 style settings.  Use the `Utilities/Scripts/clang-format.bash`_ script to
 format source code.  It automatically runs ``clang-format`` on the set of
@@ -23,38 +23,57 @@ format only a subset of files, such as those that are locally modified.
 C++ Subset Permitted
 ====================
 
-CMake supports compiling as C++98 in addition to C++11 and C++14.
-In order to support building on older toolchains some constructs
-need to be handled with care:
+CMake requires compiling as C++11 or above.  However, in order to support
+building on older toolchains some constructs need to be handled with care:
 
-* Use ``CM_AUTO_PTR`` instead of ``std::auto_ptr``.
+* Do not use ``std::auto_ptr``.
 
-  The ``std::auto_ptr`` template is deprecated in C++11.  We want to use it
-  so we can build on C++98 compilers but we do not want to turn off compiler
-  warnings about deprecated interfaces in general.  Use the ``CM_AUTO_PTR``
-  macro instead.
+  The ``std::auto_ptr`` template is deprecated in C++11. Use ``std::unique_ptr``.
 
-* Use ``CM_EQ_DELETE;`` instead of ``= delete;``.
+Source Tree Layout
+==================
 
-  Defining functions as *deleted* is not supported in C++98.  Using
-  ``CM_EQ_DELETE`` will delete the functions if the compiler supports it and
-  give them no implementation otherwise.  Calling such a function will lead
-  to compiler errors if the compiler supports *deleted* functions and linker
-  errors otherwise.
+The CMake source tree is organized as follows.
 
-* Use ``CM_DISABLE_COPY(Class)`` to mark classes as non-copyable.
+* ``Auxiliary/``:
+  Shell and editor integration files.
 
-  The ``CM_DISABLE_COPY`` macro should be used in the private section of a
-  class to make sure that attempts to copy or assign an instance of the class
-  lead to compiler errors even if the compiler does not support *deleted*
-  functions.  As a guideline, all polymorphic classes should be made
-  non-copyable in order to avoid slicing.  Classes that are composed of or
-  derived from non-copyable classes must also be made non-copyable explicitly
-  with ``CM_DISABLE_COPY``.
+* ``Help/``:
+  Documentation.  See the `CMake Documentation Guide`_.
 
-* Use ``size_t`` instead of ``std::size_t``.
+  * ``Help/dev/``:
+    Developer documentation.
 
-  Various implementations have differing implementation of ``size_t``.
-  When assigning the result of ``.size()`` on a container for example,
-  the result should be assigned to ``size_t`` not to ``std::size_t``,
-  ``unsigned int`` or similar types.
+  * ``Help/release/dev/``:
+    Release note snippets for development since last release.
+
+* ``Licenses/``:
+  License files for third-party libraries in binary distributions.
+
+* ``Modules/``:
+  CMake language modules installed with CMake.
+
+* ``Packaging/``:
+  Files used for packaging CMake itself for distribution.
+
+* ``Source/``:
+  Source code of CMake itself.
+
+* ``Templates/``:
+  Files distributed with CMake as implementation details for generators,
+  packagers, etc.
+
+* ``Tests/``:
+  The test suite.  See `Tests/README.rst`_.
+
+* ``Utilities/``:
+  Scripts, third-party source code.
+
+  * ``Utilities/Sphinx/``:
+    Sphinx configuration to build CMake user documentation.
+
+  * ``Utilities/Release/``:
+    Scripts used to package CMake itself for distribution on ``cmake.org``.
+
+.. _`CMake Documentation Guide`: documentation.rst
+.. _`Tests/README.rst`: ../../Tests/README.rst

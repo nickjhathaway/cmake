@@ -4,7 +4,7 @@
 #ifndef cmLinkLineDeviceComputer_h
 #define cmLinkLineDeviceComputer_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include <string>
 
@@ -12,41 +12,31 @@
 
 class cmComputeLinkInformation;
 class cmGeneratorTarget;
-class cmGlobalNinjaGenerator;
+class cmLocalGenerator;
 class cmOutputConverter;
 class cmStateDirectory;
 
 class cmLinkLineDeviceComputer : public cmLinkLineComputer
 {
-  CM_DISABLE_COPY(cmLinkLineDeviceComputer)
-
 public:
   cmLinkLineDeviceComputer(cmOutputConverter* outputConverter,
                            cmStateDirectory const& stateDir);
-  ~cmLinkLineDeviceComputer() CM_OVERRIDE;
+  ~cmLinkLineDeviceComputer() override;
+
+  cmLinkLineDeviceComputer(cmLinkLineDeviceComputer const&) = delete;
+  cmLinkLineDeviceComputer& operator=(cmLinkLineDeviceComputer const&) =
+    delete;
+
+  bool ComputeRequiresDeviceLinking(cmComputeLinkInformation& cli);
 
   std::string ComputeLinkLibraries(cmComputeLinkInformation& cli,
-                                   std::string const& stdLibString)
-    CM_OVERRIDE;
+                                   std::string const& stdLibString) override;
 
   std::string GetLinkerLanguage(cmGeneratorTarget* target,
-                                std::string const& config) CM_OVERRIDE;
+                                std::string const& config) override;
 };
 
-class cmNinjaLinkLineDeviceComputer : public cmLinkLineDeviceComputer
-{
-  CM_DISABLE_COPY(cmNinjaLinkLineDeviceComputer)
-
-public:
-  cmNinjaLinkLineDeviceComputer(cmOutputConverter* outputConverter,
-                                cmStateDirectory const& stateDir,
-                                cmGlobalNinjaGenerator const* gg);
-
-  std::string ConvertToLinkReference(std::string const& input) const
-    CM_OVERRIDE;
-
-private:
-  cmGlobalNinjaGenerator const* GG;
-};
+bool requireDeviceLinking(cmGeneratorTarget& target, cmLocalGenerator& lg,
+                          const std::string& config);
 
 #endif

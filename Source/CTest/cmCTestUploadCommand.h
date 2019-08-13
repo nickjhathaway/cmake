@@ -3,11 +3,11 @@
 #ifndef cmCTestUploadCommand_h
 #define cmCTestUploadCommand_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
-#include "cmCTest.h"
 #include "cmCTestHandlerCommand.h"
 
+#include <set>
 #include <string>
 
 class cmCTestGenericHandler;
@@ -22,12 +22,10 @@ class cmCommand;
 class cmCTestUploadCommand : public cmCTestHandlerCommand
 {
 public:
-  cmCTestUploadCommand() {}
-
   /**
    * This is a virtual constructor for the command.
    */
-  cmCommand* Clone() CM_OVERRIDE
+  cmCommand* Clone() override
   {
     cmCTestUploadCommand* ni = new cmCTestUploadCommand;
     ni->CTest = this->CTest;
@@ -38,15 +36,15 @@ public:
   /**
    * The name of the command as specified in CMakeList.txt.
    */
-  std::string GetName() const CM_OVERRIDE { return "ctest_upload"; }
+  std::string GetName() const override { return "ctest_upload"; }
 
   typedef cmCTestHandlerCommand Superclass;
 
 protected:
-  cmCTestGenericHandler* InitializeHandler() CM_OVERRIDE;
+  cmCTestGenericHandler* InitializeHandler() override;
 
-  bool CheckArgumentKeyword(std::string const& arg) CM_OVERRIDE;
-  bool CheckArgumentValue(std::string const& arg) CM_OVERRIDE;
+  bool CheckArgumentKeyword(std::string const& arg) override;
+  bool CheckArgumentValue(std::string const& arg) override;
 
   enum
   {
@@ -55,7 +53,7 @@ protected:
     ArgumentDoingLast2
   };
 
-  cmCTest::SetOfStrings Files;
+  std::set<std::string> Files;
 };
 
 #endif

@@ -16,15 +16,14 @@
 #include <stddef.h>
 #include <utility>
 
-cmCPackIFWInstaller::cmCPackIFWInstaller()
-{
-}
+cmCPackIFWInstaller::cmCPackIFWInstaller() = default;
 
 void cmCPackIFWInstaller::printSkippedOptionWarning(
   const std::string& optionName, const std::string& optionValue)
 {
   cmCPackIFWLogger(
-    WARNING, "Option "
+    WARNING,
+    "Option "
       << optionName << " is set to \"" << optionValue
       << "\" but will be skipped because the specified file does not exist."
       << std::endl);
@@ -93,6 +92,15 @@ void cmCPackIFWInstaller::ConfigureFromOptions()
     }
   }
 
+  // RemoveTargetDir
+  if (this->IsSetToOff("CPACK_IFW_PACKAGE_REMOVE_TARGET_DIR")) {
+    this->RemoveTargetDir = "false";
+  } else if (this->IsOn("CPACK_IFW_PACKAGE_REMOVE_TARGET_DIR")) {
+    this->RemoveTargetDir = "true";
+  } else {
+    this->RemoveTargetDir.clear();
+  }
+
   // Logo
   if (const char* option = this->GetOption("CPACK_IFW_PACKAGE_LOGO")) {
     if (cmSystemTools::FileExists(option)) {
@@ -137,9 +145,19 @@ void cmCPackIFWInstaller::ConfigureFromOptions()
     if (this->WizardStyle != "Modern" && this->WizardStyle != "Aero" &&
         this->WizardStyle != "Mac" && this->WizardStyle != "Classic") {
       cmCPackIFWLogger(
-        WARNING, "Option CPACK_IFW_PACKAGE_WIZARD_STYLE has unknown value \""
+        WARNING,
+        "Option CPACK_IFW_PACKAGE_WIZARD_STYLE has unknown value \""
           << option << "\". Expected values are: Modern, Aero, Mac, Classic."
           << std::endl);
+    }
+  }
+
+  // StyleSheet
+  if (const char* option = this->GetOption("CPACK_IFW_PACKAGE_STYLE_SHEET")) {
+    if (cmSystemTools::FileExists(option)) {
+      this->StyleSheet = option;
+    } else {
+      this->printSkippedOptionWarning("CPACK_IFW_PACKAGE_STYLE_SHEET", option);
     }
   }
 
@@ -262,7 +280,7 @@ public:
   std::string path, basePath;
 
 protected:
-  void StartElement(const std::string& name, const char** /*atts*/) CM_OVERRIDE
+  void StartElement(const std::string& name, const char** /*atts*/) override
   {
     this->file = name == "file";
     if (file) {
@@ -270,21 +288,20 @@ protected:
     }
   }
 
-  void CharacterDataHandler(const char* data, int length) CM_OVERRIDE
+  void CharacterDataHandler(const char* data, int length) override
   {
     if (this->file) {
       std::string content(data, data + length);
       content = cmSystemTools::TrimWhitespace(content);
       std::string source = this->basePath + "/" + content;
       std::string destination = this->path + "/" + content;
-      if (!cmSystemTools::CopyFileIfDifferent(source.data(),
-                                              destination.data())) {
+      if (!cmSystemTools::CopyFileIfDifferent(source, destination)) {
         this->hasErrors = true;
       }
     }
   }
 
-  void EndElement(const std::string& /*name*/) CM_OVERRIDE {}
+  void EndElement(const std::string& /*name*/) override {}
 };
 
 void cmCPackIFWInstaller::GenerateInstallerFile()
@@ -295,7 +312,7 @@ void cmCPackIFWInstaller::GenerateInstallerFile()
   }
 
   // Output stream
-  cmGeneratedFileStream fout((this->Directory + "/config/config.xml").data());
+  cmGeneratedFileStream fout(this->Directory + "/config/config.xml");
   cmXMLWriter xout(fout);
 
   xout.StartDocument();
@@ -373,6 +390,14 @@ void cmCPackIFWInstaller::GenerateInstallerFile()
     xout.Element("WizardStyle", this->WizardStyle);
   }
 
+  // Stylesheet
+  if (!this->StyleSheet.empty()) {
+    std::string name = cmSystemTools::GetFilenameName(this->StyleSheet);
+    std::string path = this->Directory + "/config/" + name;
+    cmsys::SystemTools::CopyFileIfDifferent(this->StyleSheet, path);
+    xout.Element("StyleSheet", name);
+  }
+
   // WizardDefaultWidth
   if (!this->WizardDefaultWidth.empty()) {
     xout.Element("WizardDefaultWidth", this->WizardDefaultWidth);
@@ -406,9 +431,8 @@ void cmCPackIFWInstaller::GenerateInstallerFile()
   // Remote repositories
   if (!this->RemoteRepositories.empty()) {
     xout.StartElement("RemoteRepositories");
-    for (RepositoriesVector::iterator rit = this->RemoteRepositories.begin();
-         rit != this->RemoteRepositories.end(); ++rit) {
-      (*rit)->WriteRepositoryConfig(xout);
+    for (cmCPackIFWRepository* r : this->RemoteRepositories) {
+      r->WriteRepositoryConfig(xout);
     }
     xout.EndElement();
   }
@@ -421,6 +445,10 @@ void cmCPackIFWInstaller::GenerateInstallerFile()
   // Maintenance tool ini file
   if (!this->IsVersionLess("2.0") && !this->MaintenanceToolIniFile.empty()) {
     xout.Element("MaintenanceToolIniFile", this->MaintenanceToolIniFile);
+  }
+
+  if (!this->RemoveTargetDir.empty()) {
+    xout.Element("RemoveTargetDir", this->RemoveTargetDir);
   }
 
   // Different allows
@@ -455,9 +483,10 @@ void cmCPackIFWInstaller::GenerateInstallerFile()
         std::string name = cmSystemTools::GetFilenameName(this->Resources[i]);
         std::string path = this->Directory + "/resources/" + name;
         cmsys::SystemTools::CopyFileIfDifferent(this->Resources[i], path);
-        resources.push_back(name);
+        resources.push_back(std::move(name));
       } else {
-        cmCPackIFWLogger(WARNING, "Can't copy resources from \""
+        cmCPackIFWLogger(WARNING,
+                         "Can't copy resources from \""
                            << this->Resources[i]
                            << "\". Resource will be skipped." << std::endl);
       }
@@ -492,9 +521,8 @@ void cmCPackIFWInstaller::GeneratePackageFiles()
   }
 
   // Generate packages meta information
-  for (PackagesMap::iterator pit = this->Packages.begin();
-       pit != this->Packages.end(); ++pit) {
-    cmCPackIFWPackage* package = pit->second;
+  for (auto& p : this->Packages) {
+    cmCPackIFWPackage* package = p.second;
     package->GeneratePackageFile();
   }
 }

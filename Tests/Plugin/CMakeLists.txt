@@ -15,6 +15,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${Plugin_BINARY_DIR}/lib/static)
 set(KWSYS_NAMESPACE kwsys)
 set(KWSYS_HEADER_ROOT ${Plugin_BINARY_DIR}/include)
 set(KWSYS_USE_DynamicLoader 1)
+set(KWSYS_ENCODING_DEFAULT_CODEPAGE CP_UTF8)
 add_subdirectory(${Plugin_SOURCE_DIR}/../../Source/kwsys src/kwsys)
 
 # Configure the location of plugins.
@@ -27,13 +28,6 @@ include_directories(
   ${Plugin_BINARY_DIR}/include
   ${Plugin_SOURCE_DIR}/include
   )
-
-# Those versions of the HP compiler that need a flag to get proper C++98
-# template support also need a flag to use the newer C++ library.
-if (CMAKE_CXX_COMPILER_ID STREQUAL HP AND
-    CMAKE_CXX98_STANDARD_COMPILE_OPTION STREQUAL "+hpxstd98")
-  string(APPEND CMAKE_CXX_FLAGS " -AA")
-endif ()
 
 # Clang/C2 in C++98 mode cannot properly handle some of MSVC headers
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND

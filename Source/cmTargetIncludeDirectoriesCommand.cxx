@@ -8,9 +8,9 @@
 #include "cmGeneratorExpression.h"
 #include "cmListFileCache.h"
 #include "cmMakefile.h"
+#include "cmMessageType.h"
 #include "cmSystemTools.h"
 #include "cmTarget.h"
-#include "cmake.h"
 
 class cmExecutionStatus;
 
@@ -21,23 +21,13 @@ bool cmTargetIncludeDirectoriesCommand::InitialPass(
                                ArgumentFlags(PROCESS_BEFORE | PROCESS_SYSTEM));
 }
 
-void cmTargetIncludeDirectoriesCommand::HandleImportedTarget(
-  const std::string& tgt)
-{
-  std::ostringstream e;
-  e << "Cannot specify include directories for imported target \"" << tgt
-    << "\".";
-  this->Makefile->IssueMessage(cmake::FATAL_ERROR, e.str());
-}
-
 void cmTargetIncludeDirectoriesCommand::HandleMissingTarget(
   const std::string& name)
 {
   std::ostringstream e;
   e << "Cannot specify include directories for target \"" << name
-    << "\" "
-       "which is not built by this project.";
-  this->Makefile->IssueMessage(cmake::FATAL_ERROR, e.str());
+    << "\" which is not built by this project.";
+  this->Makefile->IssueMessage(MessageType::FATAL_ERROR, e.str());
 }
 
 std::string cmTargetIncludeDirectoriesCommand::Join(
@@ -45,15 +35,13 @@ std::string cmTargetIncludeDirectoriesCommand::Join(
 {
   std::string dirs;
   std::string sep;
-  std::string prefix =
-    this->Makefile->GetCurrentSourceDirectory() + std::string("/");
-  for (std::vector<std::string>::const_iterator it = content.begin();
-       it != content.end(); ++it) {
-    if (cmSystemTools::FileIsFullPath(it->c_str()) ||
-        cmGeneratorExpression::Find(*it) == 0) {
-      dirs += sep + *it;
+  std::string prefix = this->Makefile->GetCurrentSourceDirectory() + "/";
+  for (std::string const& it : content) {
+    if (cmSystemTools::FileIsFullPath(it) ||
+        cmGeneratorExpression::Find(it) == 0) {
+      dirs += sep + it;
     } else {
-      dirs += sep + prefix + *it;
+      dirs += sep + prefix + it;
     }
     sep = ";";
   }
@@ -67,21 +55,19 @@ bool cmTargetIncludeDirectoriesCommand::HandleDirectContent(
   cmListFileBacktrace lfbt = this->Makefile->GetBacktrace();
   tgt->InsertInclude(this->Join(content), lfbt, prepend);
   if (system) {
-    std::string prefix =
-      this->Makefile->GetCurrentSourceDirectory() + std::string("/");
+    std::string prefix = this->Makefile->GetCurrentSourceDirectory() + "/";
     std::set<std::string> sdirs;
-    for (std::vector<std::string>::const_iterator it = content.begin();
-         it != content.end(); ++it) {
-      if (cmSystemTools::FileIsFullPath(it->c_str()) ||
-          cmGeneratorExpression::Find(*it) == 0) {
-        sdirs.insert(*it);
+    for (std::string const& it : content) {
+      if (cmSystemTools::FileIsFullPath(it) ||
+          cmGeneratorExpression::Find(it) == 0) {
+        sdirs.insert(it);
       } else {
-        sdirs.insert(prefix + *it);
+        sdirs.insert(prefix + it);
       }
     }
     tgt->AddSystemIncludeDirectories(sdirs);
   }
-  return true;
+  return true; // Successfully handled.
 }
 
 void cmTargetIncludeDirectoriesCommand::HandleInterfaceContent(
