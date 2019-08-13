@@ -3,7 +3,7 @@
 #ifndef cmMakefileTargetGenerator_h
 #define cmMakefileTargetGenerator_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include <iosfwd>
 #include <map>
@@ -12,12 +12,12 @@
 #include <vector>
 
 #include "cmCommonTargetGenerator.h"
+#include "cmGeneratorTarget.h"
 #include "cmLocalUnixMakefileGenerator3.h"
 #include "cmOSXBundleGenerator.h"
 
 class cmCustomCommandGenerator;
 class cmGeneratedFileStream;
-class cmGeneratorTarget;
 class cmGlobalUnixMakefileGenerator3;
 class cmLinkLineComputer;
 class cmOutputConverter;
@@ -33,7 +33,7 @@ class cmMakefileTargetGenerator : public cmCommonTargetGenerator
 public:
   // constructor to set the ivars
   cmMakefileTargetGenerator(cmGeneratorTarget* target);
-  ~cmMakefileTargetGenerator() CM_OVERRIDE;
+  ~cmMakefileTargetGenerator() override;
 
   // construct using this factory call
   static cmMakefileTargetGenerator* New(cmGeneratorTarget* tgt);
@@ -52,6 +52,8 @@ public:
   cmGeneratorTarget* GetGeneratorTarget() { return this->GeneratorTarget; }
 
 protected:
+  void GetTargetLinkFlags(std::string& flags, const std::string& linkLanguage);
+
   // create the file and directory etc
   void CreateRuleFile();
 
@@ -63,16 +65,13 @@ protected:
   void WriteCommonCodeRules();
   void WriteTargetLanguageFlags();
 
-  // write the provide require rules for this target
-  void WriteTargetRequiresRules();
-
   // write the clean rules for this target
   void WriteTargetCleanRules();
 
   // write the depend rules for this target
   void WriteTargetDependRules();
 
-  // write rules for Mac OS X Application Bundle content.
+  // write rules for macOS Application Bundle content.
   struct MacOSXContentGeneratorType
     : cmOSXBundleGenerator::MacOSXContentGeneratorType
   {
@@ -81,8 +80,7 @@ protected:
     {
     }
 
-    void operator()(cmSourceFile const& source,
-                    const char* pkgloc) CM_OVERRIDE;
+    void operator()(cmSourceFile const& source, const char* pkgloc) override;
 
   private:
     cmMakefileTargetGenerator* Generator;
@@ -130,7 +128,8 @@ protected:
   void AppendObjectDepends(std::vector<std::string>& depends);
 
   // Append link rule dependencies (objects, etc.).
-  void AppendLinkDepends(std::vector<std::string>& depends);
+  void AppendLinkDepends(std::vector<std::string>& depends,
+                         const std::string& linkLanguage);
 
   // Lookup the link rule for this target.
   std::string GetLinkRule(const std::string& linkRuleVar);
@@ -168,8 +167,7 @@ protected:
   /** Add commands for generate def files */
   void GenDefFile(std::vector<std::string>& real_link_commands);
 
-  void AddIncludeFlags(std::string& flags,
-                       const std::string& lang) CM_OVERRIDE;
+  void AddIncludeFlags(std::string& flags, const std::string& lang) override;
 
   virtual void CloseFileStreams();
   cmLocalUnixMakefileGenerator3* LocalGenerator;
@@ -212,7 +210,7 @@ protected:
   cmGeneratedFileStream* InfoFileStream;
 
   // files to clean
-  std::vector<std::string> CleanFiles;
+  std::set<std::string> CleanFiles;
 
   // objects used by this target
   std::vector<std::string> Objects;
@@ -233,15 +231,11 @@ protected:
                      bool in_help = false);
 
   // Target name info.
-  std::string TargetNameOut;
-  std::string TargetNameSO;
-  std::string TargetNameReal;
-  std::string TargetNameImport;
-  std::string TargetNamePDB;
+  cmGeneratorTarget::Names TargetNames;
 
-  // Mac OS X content info.
+  // macOS content info.
   std::set<std::string> MacContentFolders;
-  cmOSXBundleGenerator* OSXBundleGenerator;
+  std::unique_ptr<cmOSXBundleGenerator> OSXBundleGenerator;
   MacOSXContentGeneratorType* MacOSXContentGenerator;
 };
 

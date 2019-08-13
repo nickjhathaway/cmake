@@ -3,11 +3,15 @@
 #ifndef cmCTestTestHandler_h
 #define cmCTestTestHandler_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmCTestGenericHandler.h"
+#include "cmDuration.h"
+#include "cmListFileCache.h"
 
 #include "cmsys/RegularExpression.hxx"
+#include <chrono>
+#include <cstdint>
 #include <iosfwd>
 #include <map>
 #include <set>
@@ -28,7 +32,6 @@ class cmCTestTestHandler : public cmCTestGenericHandler
 {
   friend class cmCTestRunTest;
   friend class cmCTestMultiProcessHandler;
-  friend class cmCTestBatchTestHandler;
 
 public:
   typedef cmCTestGenericHandler Superclass;
@@ -36,10 +39,10 @@ public:
   /**
    * The main entry point for this class
    */
-  int ProcessHandler() CM_OVERRIDE;
+  int ProcessHandler() override;
 
   /**
-   * When both -R and -I are used should te resulting test list be the
+   * When both -R and -I are used should the resulting test list be the
    * intersection or the union of the lists. By default it is the
    * intersection.
    */
@@ -54,9 +57,9 @@ public:
   /**
    * This method is called when reading CTest custom file
    */
-  void PopulateCustomVectors(cmMakefile* mf) CM_OVERRIDE;
+  void PopulateCustomVectors(cmMakefile* mf) override;
 
-  ///! Control the use of the regular expresisons, call these methods to turn
+  //! Control the use of the regular expresisons, call these methods to turn
   /// them on
   void UseIncludeRegExp();
   void UseExcludeRegExp();
@@ -75,7 +78,7 @@ public:
     this->CustomMaximumFailedTestOutputSize = n;
   }
 
-  ///! pass the -I argument down
+  //! pass the -I argument down
   void SetTestsToRunInformation(const char*);
 
   cmCTestTestHandler();
@@ -90,7 +93,12 @@ public:
    */
   bool SetTestsProperties(const std::vector<std::string>& args);
 
-  void Initialize() CM_OVERRIDE;
+  /**
+   * Set directory properties
+   */
+  bool SetDirectoryProperties(const std::vector<std::string>& args);
+
+  void Initialize() override;
 
   // NOTE: This struct is Saved/Restored
   // in cmCTestTestHandler, if you add to this class
@@ -105,11 +113,11 @@ public:
     std::vector<std::string> Depends;
     std::vector<std::string> AttachedFiles;
     std::vector<std::string> AttachOnFail;
-    std::vector<std::pair<cmsys::RegularExpression, std::string> >
+    std::vector<std::pair<cmsys::RegularExpression, std::string>>
       ErrorRegularExpressions;
-    std::vector<std::pair<cmsys::RegularExpression, std::string> >
+    std::vector<std::pair<cmsys::RegularExpression, std::string>>
       RequiredRegularExpressions;
-    std::vector<std::pair<cmsys::RegularExpression, std::string> >
+    std::vector<std::pair<cmsys::RegularExpression, std::string>>
       TimeoutRegularExpressions;
     std::map<std::string, std::string> Measurements;
     bool IsInBasedOnREOptions;
@@ -118,12 +126,14 @@ public:
     float Cost;
     int PreviousRuns;
     bool RunSerial;
-    double Timeout;
+    cmDuration Timeout;
     bool ExplicitTimeout;
-    double AlternateTimeout;
+    cmDuration AlternateTimeout;
     int Index;
     // Requested number of process slots
     int Processors;
+    bool WantAffinity;
+    std::vector<size_t> Affinity;
     // return code of test which will mark test as "not run"
     int SkipReturnCode;
     std::vector<std::string> Environment;
@@ -133,6 +143,8 @@ public:
     std::set<std::string> FixturesCleanup;
     std::set<std::string> FixturesRequired;
     std::set<std::string> RequireSuccessDepends;
+    // Private test generator properties used to track backtraces
+    cmListFileBacktrace Backtrace;
   };
 
   struct cmCTestTestResult
@@ -141,9 +153,10 @@ public:
     std::string Path;
     std::string Reason;
     std::string FullCommandLine;
-    double ExecutionTime;
-    int ReturnValue;
+    cmDuration ExecutionTime;
+    std::int64_t ReturnValue;
     int Status;
+    std::string ExceptionStatus;
     bool CompressOutput;
     std::string CompletionStatus;
     std::string Output;
@@ -182,15 +195,17 @@ protected:
   virtual void GenerateTestCommand(std::vector<std::string>& args, int test);
   int ExecuteCommands(std::vector<std::string>& vec);
 
-  void WriteTestResultHeader(cmXMLWriter& xml, cmCTestTestResult* result);
-  void WriteTestResultFooter(cmXMLWriter& xml, cmCTestTestResult* result);
+  void WriteTestResultHeader(cmXMLWriter& xml,
+                             cmCTestTestResult const& result);
+  void WriteTestResultFooter(cmXMLWriter& xml,
+                             cmCTestTestResult const& result);
   // Write attached test files into the xml
-  void AttachFiles(cmXMLWriter& xml, cmCTestTestResult* result);
+  void AttachFiles(cmXMLWriter& xml, cmCTestTestResult& result);
 
   //! Clean test output to specified length
   bool CleanTestOutput(std::string& output, size_t length);
 
-  double ElapsedTestingTime;
+  cmDuration ElapsedTestingTime;
 
   typedef std::vector<cmCTestTestResult> TestResultsVector;
   TestResultsVector TestResults;
@@ -198,8 +213,8 @@ protected:
   std::vector<std::string> CustomTestsIgnore;
   std::string StartTest;
   std::string EndTest;
-  unsigned int StartTestTime;
-  unsigned int EndTestTime;
+  std::chrono::system_clock::time_point StartTestTime;
+  std::chrono::system_clock::time_point EndTestTime;
   bool MemCheck;
   int CustomMaximumPassedTestOutputSize;
   int CustomMaximumFailedTestOutputSize;
@@ -226,7 +241,8 @@ private:
    */
   virtual void GenerateDartOutput(cmXMLWriter& xml);
 
-  void PrintLabelSummary();
+  void PrintLabelOrSubprojectSummary(bool isSubProject);
+
   /**
    * Run the tests for a directory and any subdirectories
    */
@@ -262,7 +278,7 @@ private:
    */
   std::string FindTheExecutable(const char* exe);
 
-  const char* GetTestStatus(int status);
+  std::string GetTestStatus(cmCTestTestResult const&);
   void ExpandTestsToRunInformation(size_t numPossibleTests);
   void ExpandTestsToRunInformationForRerunFailed();
 

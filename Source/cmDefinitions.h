@@ -6,10 +6,10 @@
 #include "cmConfigure.h" // IWYU pragma: keep
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "cmLinkedTree.h"
-#include "cm_unordered_map.hxx"
 
 /** \class cmDefinitions
  * \brief Store a scope of variable definitions for CMake language.
@@ -23,8 +23,8 @@ class cmDefinitions
   typedef cmLinkedTree<cmDefinitions>::iterator StackIter;
 
 public:
-  static const char* Get(const std::string& key, StackIter begin,
-                         StackIter end);
+  static const std::string* Get(const std::string& key, StackIter begin,
+                                StackIter end);
 
   static void Raise(const std::string& key, StackIter begin, StackIter end);
 
@@ -47,30 +47,23 @@ private:
     typedef std::string std_string;
 
   public:
-    Def()
-      : std_string()
-      , Exists(false)
-      , Used(false)
-    {
-    }
+    Def() = default;
     Def(const char* v)
       : std_string(v ? v : "")
       , Exists(v ? true : false)
-      , Used(false)
     {
     }
     Def(const std_string& v)
       : std_string(v)
       , Exists(true)
-      , Used(false)
     {
     }
-    bool Exists;
-    bool Used;
+    bool Exists = false;
+    bool Used = false;
   };
   static Def NoDef;
 
-  typedef CM_UNORDERED_MAP<std::string, Def> MapType;
+  typedef std::unordered_map<std::string, Def> MapType;
   MapType Map;
 
   static Def const& GetInternal(const std::string& key, StackIter begin,

@@ -8,6 +8,7 @@
 #include "cmInstalledFile.h"
 #include "cmMakefile.h"
 #include "cmProperty.h"
+#include "cmRange.h"
 #include "cmSourceFile.h"
 #include "cmState.h"
 #include "cmSystemTools.h"
@@ -33,25 +34,25 @@ bool cmSetPropertyCommand::InitialPass(std::vector<std::string> const& args,
   }
 
   // Get the scope on which to set the property.
-  std::vector<std::string>::const_iterator arg = args.begin();
+  std::string const& scopeName = args.front();
   cmProperty::ScopeType scope;
-  if (*arg == "GLOBAL") {
+  if (scopeName == "GLOBAL") {
     scope = cmProperty::GLOBAL;
-  } else if (*arg == "DIRECTORY") {
+  } else if (scopeName == "DIRECTORY") {
     scope = cmProperty::DIRECTORY;
-  } else if (*arg == "TARGET") {
+  } else if (scopeName == "TARGET") {
     scope = cmProperty::TARGET;
-  } else if (*arg == "SOURCE") {
+  } else if (scopeName == "SOURCE") {
     scope = cmProperty::SOURCE_FILE;
-  } else if (*arg == "TEST") {
+  } else if (scopeName == "TEST") {
     scope = cmProperty::TEST;
-  } else if (*arg == "CACHE") {
+  } else if (scopeName == "CACHE") {
     scope = cmProperty::CACHE;
-  } else if (*arg == "INSTALL") {
+  } else if (scopeName == "INSTALL") {
     scope = cmProperty::INSTALL;
   } else {
     std::ostringstream e;
-    e << "given invalid scope " << *arg << ".  "
+    e << "given invalid scope " << scopeName << ".  "
       << "Valid scopes are GLOBAL, DIRECTORY, "
          "TARGET, SOURCE, TEST, CACHE, INSTALL.";
     this->SetError(e.str());
@@ -68,32 +69,32 @@ bool cmSetPropertyCommand::InitialPass(std::vector<std::string> const& args,
   };
   Doing doing = DoingNames;
   const char* sep = "";
-  for (++arg; arg != args.end(); ++arg) {
-    if (*arg == "PROPERTY") {
+  for (std::string const& arg : cmMakeRange(args).advance(1)) {
+    if (arg == "PROPERTY") {
       doing = DoingProperty;
-    } else if (*arg == "APPEND") {
+    } else if (arg == "APPEND") {
       doing = DoingNone;
       this->AppendMode = true;
       this->Remove = false;
       this->AppendAsString = false;
-    } else if (*arg == "APPEND_STRING") {
+    } else if (arg == "APPEND_STRING") {
       doing = DoingNone;
       this->AppendMode = true;
       this->Remove = false;
       this->AppendAsString = true;
     } else if (doing == DoingNames) {
-      this->Names.insert(*arg);
+      this->Names.insert(arg);
     } else if (doing == DoingProperty) {
-      this->PropertyName = *arg;
+      this->PropertyName = arg;
       doing = DoingValues;
     } else if (doing == DoingValues) {
       this->PropertyValue += sep;
       sep = ";";
-      this->PropertyValue += *arg;
+      this->PropertyValue += arg;
       this->Remove = false;
     } else {
       std::ostringstream e;
-      e << "given invalid argument \"" << *arg << "\".";
+      e << "given invalid argument \"" << arg << "\".";
       this->SetError(e.str());
       return false;
     }
@@ -141,7 +142,7 @@ bool cmSetPropertyCommand::HandleGlobalMode()
   std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
-    value = CM_NULLPTR;
+    value = nullptr;
   }
   if (this->AppendMode) {
     cm->AppendProperty(name, value ? value : "", this->AppendAsString);
@@ -167,7 +168,7 @@ bool cmSetPropertyCommand::HandleDirectoryMode()
     // Construct the directory name.  Interpret relative paths with
     // respect to the current directory.
     std::string dir = *this->Names.begin();
-    if (!cmSystemTools::FileIsFullPath(dir.c_str())) {
+    if (!cmSystemTools::FileIsFullPath(dir)) {
       dir = this->Makefile->GetCurrentSourceDirectory();
       dir += "/";
       dir += *this->Names.begin();
@@ -191,7 +192,7 @@ bool cmSetPropertyCommand::HandleDirectoryMode()
   std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
-    value = CM_NULLPTR;
+    value = nullptr;
   }
   if (this->AppendMode) {
     mf->AppendProperty(name, value ? value : "", this->AppendAsString);
@@ -204,20 +205,19 @@ bool cmSetPropertyCommand::HandleDirectoryMode()
 
 bool cmSetPropertyCommand::HandleTargetMode()
 {
-  for (std::set<std::string>::const_iterator ni = this->Names.begin();
-       ni != this->Names.end(); ++ni) {
-    if (this->Makefile->IsAlias(*ni)) {
+  for (std::string const& name : this->Names) {
+    if (this->Makefile->IsAlias(name)) {
       this->SetError("can not be used on an ALIAS target.");
       return false;
     }
-    if (cmTarget* target = this->Makefile->FindTargetToUse(*ni)) {
+    if (cmTarget* target = this->Makefile->FindTargetToUse(name)) {
       // Handle the current target.
       if (!this->HandleTarget(target)) {
         return false;
       }
     } else {
       std::ostringstream e;
-      e << "could not find TARGET " << *ni
+      e << "could not find TARGET " << name
         << ".  Perhaps it has not yet been created.";
       this->SetError(e.str());
       return false;
@@ -232,7 +232,7 @@ bool cmSetPropertyCommand::HandleTarget(cmTarget* target)
   std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
-    value = CM_NULLPTR;
+    value = nullptr;
   }
   if (this->AppendMode) {
     target->AppendProperty(name, value, this->AppendAsString);
@@ -248,16 +248,15 @@ bool cmSetPropertyCommand::HandleTarget(cmTarget* target)
 
 bool cmSetPropertyCommand::HandleSourceMode()
 {
-  for (std::set<std::string>::const_iterator ni = this->Names.begin();
-       ni != this->Names.end(); ++ni) {
+  for (std::string const& name : this->Names) {
     // Get the source file.
-    if (cmSourceFile* sf = this->Makefile->GetOrCreateSource(*ni)) {
+    if (cmSourceFile* sf = this->Makefile->GetOrCreateSource(name)) {
       if (!this->HandleSource(sf)) {
         return false;
       }
     } else {
       std::ostringstream e;
-      e << "given SOURCE name that could not be found or created: " << *ni;
+      e << "given SOURCE name that could not be found or created: " << name;
       this->SetError(e.str());
       return false;
     }
@@ -271,7 +270,7 @@ bool cmSetPropertyCommand::HandleSource(cmSourceFile* sf)
   std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
-    value = CM_NULLPTR;
+    value = nullptr;
   }
 
   if (this->AppendMode) {
@@ -303,9 +302,8 @@ bool cmSetPropertyCommand::HandleTestMode()
   if (!this->Names.empty()) {
     std::ostringstream e;
     e << "given TEST names that do not exist:\n";
-    for (std::set<std::string>::const_iterator ni = this->Names.begin();
-         ni != this->Names.end(); ++ni) {
-      e << "  " << *ni << "\n";
+    for (std::string const& name : this->Names) {
+      e << "  " << name << "\n";
     }
     this->SetError(e.str());
     return false;
@@ -319,7 +317,7 @@ bool cmSetPropertyCommand::HandleTest(cmTest* test)
   std::string const& name = this->PropertyName;
   const char* value = this->PropertyValue.c_str();
   if (this->Remove) {
-    value = CM_NULLPTR;
+    value = nullptr;
   }
   if (this->AppendMode) {
     test->AppendProperty(name, value, this->AppendAsString);
@@ -333,11 +331,11 @@ bool cmSetPropertyCommand::HandleTest(cmTest* test)
 bool cmSetPropertyCommand::HandleCacheMode()
 {
   if (this->PropertyName == "ADVANCED") {
-    if (!this->Remove && !cmSystemTools::IsOn(this->PropertyValue.c_str()) &&
-        !cmSystemTools::IsOff(this->PropertyValue.c_str())) {
+    if (!this->Remove && !cmSystemTools::IsOn(this->PropertyValue) &&
+        !cmSystemTools::IsOff(this->PropertyValue)) {
       std::ostringstream e;
       e << "given non-boolean value \"" << this->PropertyValue
-        << "\" for CACHE property \"ADVANCED\".  ";
+        << R"(" for CACHE property "ADVANCED".  )";
       this->SetError(e.str());
       return false;
     }
@@ -359,19 +357,18 @@ bool cmSetPropertyCommand::HandleCacheMode()
     return false;
   }
 
-  for (std::set<std::string>::const_iterator ni = this->Names.begin();
-       ni != this->Names.end(); ++ni) {
+  for (std::string const& name : this->Names) {
     // Get the source file.
     cmMakefile* mf = this->GetMakefile();
     cmake* cm = mf->GetCMakeInstance();
-    const char* existingValue = cm->GetState()->GetCacheEntryValue(*ni);
+    const char* existingValue = cm->GetState()->GetCacheEntryValue(name);
     if (existingValue) {
-      if (!this->HandleCacheEntry(*ni)) {
+      if (!this->HandleCacheEntry(name)) {
         return false;
       }
     } else {
       std::ostringstream e;
-      e << "could not find CACHE variable " << *ni
+      e << "could not find CACHE variable " << name
         << ".  Perhaps it has not yet been created.";
       this->SetError(e.str());
       return false;
@@ -403,16 +400,15 @@ bool cmSetPropertyCommand::HandleInstallMode()
 {
   cmake* cm = this->Makefile->GetCMakeInstance();
 
-  for (std::set<std::string>::const_iterator i = this->Names.begin();
-       i != this->Names.end(); ++i) {
+  for (std::string const& name : this->Names) {
     if (cmInstalledFile* file =
-          cm->GetOrCreateInstalledFile(this->Makefile, *i)) {
+          cm->GetOrCreateInstalledFile(this->Makefile, name)) {
       if (!this->HandleInstall(file)) {
         return false;
       }
     } else {
       std::ostringstream e;
-      e << "given INSTALL name that could not be found or created: " << *i;
+      e << "given INSTALL name that could not be found or created: " << name;
       this->SetError(e.str());
       return false;
     }

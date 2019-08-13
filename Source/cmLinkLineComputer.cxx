@@ -11,6 +11,7 @@
 #include "cmOutputConverter.h"
 #include "cmStateDirectory.h"
 #include "cmStateTypes.h"
+#include "cmSystemTools.h"
 
 cmLinkLineComputer::cmLinkLineComputer(cmOutputConverter* outputConverter,
                                        cmStateDirectory const& stateDir)
@@ -22,9 +23,7 @@ cmLinkLineComputer::cmLinkLineComputer(cmOutputConverter* outputConverter,
 {
 }
 
-cmLinkLineComputer::~cmLinkLineComputer()
-{
-}
+cmLinkLineComputer::~cmLinkLineComputer() = default;
 
 void cmLinkLineComputer::SetUseWatcomQuote(bool useWatcomQuote)
 {
@@ -46,9 +45,8 @@ std::string cmLinkLineComputer::ConvertToLinkReference(
 {
   std::string relLib = lib;
 
-  if (cmOutputConverter::ContainedInDirectory(
-        this->StateDir.GetCurrentBinary(), lib, this->StateDir)) {
-    relLib = cmOutputConverter::ForceToRelativePath(
+  if (this->StateDir.ContainsBoth(this->StateDir.GetCurrentBinary(), lib)) {
+    relLib = cmSystemTools::ForceToRelativePath(
       this->StateDir.GetCurrentBinary(), lib);
   }
   return relLib;
@@ -59,17 +57,16 @@ std::string cmLinkLineComputer::ComputeLinkLibs(cmComputeLinkInformation& cli)
   std::string linkLibs;
   typedef cmComputeLinkInformation::ItemVector ItemVector;
   ItemVector const& items = cli.GetItems();
-  for (ItemVector::const_iterator li = items.begin(); li != items.end();
-       ++li) {
-    if (li->Target &&
-        li->Target->GetType() == cmStateEnums::INTERFACE_LIBRARY) {
+  for (auto const& item : items) {
+    if (item.Target &&
+        item.Target->GetType() == cmStateEnums::INTERFACE_LIBRARY) {
       continue;
     }
-    if (li->IsPath) {
+    if (item.IsPath) {
       linkLibs +=
-        this->ConvertToOutputFormat(this->ConvertToLinkReference(li->Value));
+        this->ConvertToOutputFormat(this->ConvertToLinkReference(item.Value));
     } else {
-      linkLibs += li->Value;
+      linkLibs += item.Value;
     }
     linkLibs += " ";
   }
@@ -102,15 +99,34 @@ std::string cmLinkLineComputer::ComputeLinkPath(
   std::string const& libPathTerminator)
 {
   std::string linkPath;
-  std::vector<std::string> const& libDirs = cli.GetDirectories();
-  for (std::vector<std::string>::const_iterator libDir = libDirs.begin();
-       libDir != libDirs.end(); ++libDir) {
-    std::string libpath = this->ConvertToOutputForExisting(*libDir);
-    linkPath += " " + libPathFlag;
-    linkPath += libpath;
-    linkPath += libPathTerminator;
-    linkPath += " ";
+
+  if (cli.GetLinkLanguage() == "Swift") {
+    for (const cmComputeLinkInformation::Item& item : cli.GetItems()) {
+      const cmGeneratorTarget* target = item.Target;
+      if (!target) {
+        continue;
+      }
+
+      if (target->GetType() == cmStateEnums::STATIC_LIBRARY ||
+          target->GetType() == cmStateEnums::SHARED_LIBRARY) {
+        cmStateEnums::ArtifactType type = cmStateEnums::RuntimeBinaryArtifact;
+        if (target->GetType() == cmStateEnums::SHARED_LIBRARY &&
+            target->IsDLLPlatform()) {
+          type = cmStateEnums::ImportLibraryArtifact;
+        }
+
+        linkPath += " " + libPathFlag +
+          item.Target->GetDirectory(cli.GetConfig(), type) +
+          libPathTerminator + " ";
+      }
+    }
   }
+
+  for (std::string const& libDir : cli.GetDirectories()) {
+    linkPath += " " + libPathFlag + this->ConvertToOutputForExisting(libDir) +
+      libPathTerminator + " ";
+  }
+
   return linkPath;
 }
 
@@ -123,10 +139,9 @@ std::string cmLinkLineComputer::ComputeRPath(cmComputeLinkInformation& cli)
     std::vector<std::string> runtimeDirs;
     cli.GetRPath(runtimeDirs, this->Relink);
 
-    for (std::vector<std::string>::iterator ri = runtimeDirs.begin();
-         ri != runtimeDirs.end(); ++ri) {
+    for (std::string const& rd : runtimeDirs) {
       rpath += cli.GetRuntimeFlag();
-      rpath += this->ConvertToOutputFormat(*ri);
+      rpath += this->ConvertToOutputFormat(rd);
       rpath += " ";
     }
   } else {
@@ -150,10 +165,9 @@ std::string cmLinkLineComputer::ComputeFrameworkPath(
   std::string frameworkPath;
   if (!fwSearchFlag.empty()) {
     std::vector<std::string> const& fwDirs = cli.GetFrameworkPaths();
-    for (std::vector<std::string>::const_iterator fdi = fwDirs.begin();
-         fdi != fwDirs.end(); ++fdi) {
+    for (std::string const& fd : fwDirs) {
       frameworkPath += fwSearchFlag;
-      frameworkPath += this->ConvertToOutputFormat(*fdi);
+      frameworkPath += this->ConvertToOutputFormat(fd);
       frameworkPath += " ";
     }
   }

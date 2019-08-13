@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
   }
   fileName = CFSTR("RuntimeScript");
   if (!(scriptFileURL =
-          CFBundleCopyResourceURL(appBundle, fileName, NULL, NULL))) {
+          CFBundleCopyResourceURL(appBundle, fileName, nullptr, nullptr))) {
     DebugError("CFBundleCopyResourceURL failed");
     return 1;
   }
@@ -46,8 +46,7 @@ int main(int argc, char* argv[])
 
   // get the file system path of the url as a cstring
   // in an encoding suitable for posix apis
-  if (CFURLGetFileSystemRepresentation(scriptFileURL, true, path, PATH_MAX) ==
-      false) {
+  if (!CFURLGetFileSystemRepresentation(scriptFileURL, true, path, PATH_MAX)) {
     DebugError("CFURLGetFileSystemRepresentation failed");
     return 1;
   }
@@ -71,10 +70,10 @@ int main(int argc, char* argv[])
   for (cc = 1; cc < argc; ++cc) {
     args.push_back(argv[cc]);
   }
-  args.push_back(0);
+  args.push_back(nullptr);
 
   cmsysProcess* cp = cmsysProcess_New();
-  cmsysProcess_SetCommand(cp, &*args.begin());
+  cmsysProcess_SetCommand(cp, args.data());
   cmsysProcess_SetWorkingDirectory(cp, scriptDirectory.c_str());
   cmsysProcess_SetOption(cp, cmsysProcess_Option_HideWindow, 1);
   cmsysProcess_SetTimeout(cp, 0);
@@ -83,7 +82,7 @@ int main(int argc, char* argv[])
   std::vector<char> tempOutput;
   char* data;
   int length;
-  while (cmsysProcess_WaitForData(cp, &data, &length, 0)) {
+  while (cmsysProcess_WaitForData(cp, &data, &length, nullptr)) {
     // Translate NULL characters in the output into valid text.
     for (int i = 0; i < length; ++i) {
       if (data[i] == '\0') {
@@ -93,7 +92,7 @@ int main(int argc, char* argv[])
     std::cout.write(data, length);
   }
 
-  cmsysProcess_WaitForExit(cp, 0);
+  cmsysProcess_WaitForExit(cp, nullptr);
 
   bool result = true;
   if (cmsysProcess_GetState(cp) == cmsysProcess_State_Exited) {

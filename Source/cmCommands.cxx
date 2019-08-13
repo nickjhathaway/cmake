@@ -4,6 +4,7 @@
 #include "cmPolicies.h"
 #include "cmState.h"
 
+#include "cmAddCompileDefinitionsCommand.h"
 #include "cmAddCustomCommandCommand.h"
 #include "cmAddCustomTargetCommand.h"
 #include "cmAddDefinitionsCommand.h"
@@ -42,6 +43,7 @@
 #include "cmIfCommand.h"
 #include "cmIncludeCommand.h"
 #include "cmIncludeDirectoryCommand.h"
+#include "cmIncludeGuardCommand.h"
 #include "cmIncludeRegularExpressionCommand.h"
 #include "cmInstallCommand.h"
 #include "cmInstallFilesCommand.h"
@@ -67,42 +69,45 @@
 #include "cmSiteNameCommand.h"
 #include "cmStringCommand.h"
 #include "cmSubdirCommand.h"
+#include "cmTargetCompileDefinitionsCommand.h"
+#include "cmTargetCompileFeaturesCommand.h"
+#include "cmTargetCompileOptionsCommand.h"
+#include "cmTargetIncludeDirectoriesCommand.h"
 #include "cmTargetLinkLibrariesCommand.h"
+#include "cmTargetSourcesCommand.h"
 #include "cmTryCompileCommand.h"
 #include "cmTryRunCommand.h"
 #include "cmUnsetCommand.h"
 #include "cmWhileCommand.h"
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
-#include "cmAddCompileOptionsCommand.h"
-#include "cmAuxSourceDirectoryCommand.h"
-#include "cmBuildNameCommand.h"
-#include "cmCMakeHostSystemInformationCommand.h"
-#include "cmExportCommand.h"
-#include "cmExportLibraryDependenciesCommand.h"
-#include "cmFLTKWrapUICommand.h"
-#include "cmIncludeExternalMSProjectCommand.h"
-#include "cmInstallProgramsCommand.h"
-#include "cmLinkLibrariesCommand.h"
-#include "cmLoadCacheCommand.h"
-#include "cmLoadCommandCommand.h"
-#include "cmOutputRequiredFilesCommand.h"
-#include "cmQTWrapCPPCommand.h"
-#include "cmQTWrapUICommand.h"
-#include "cmRemoveCommand.h"
-#include "cmRemoveDefinitionsCommand.h"
-#include "cmSourceGroupCommand.h"
-#include "cmSubdirDependsCommand.h"
-#include "cmTargetCompileDefinitionsCommand.h"
-#include "cmTargetCompileFeaturesCommand.h"
-#include "cmTargetCompileOptionsCommand.h"
-#include "cmTargetIncludeDirectoriesCommand.h"
-#include "cmTargetSourcesCommand.h"
-#include "cmUseMangledMesaCommand.h"
-#include "cmUtilitySourceCommand.h"
-#include "cmVariableRequiresCommand.h"
-#include "cmVariableWatchCommand.h"
-#include "cmWriteFileCommand.h"
+#  include "cmAddCompileOptionsCommand.h"
+#  include "cmAddLinkOptionsCommand.h"
+#  include "cmAuxSourceDirectoryCommand.h"
+#  include "cmBuildNameCommand.h"
+#  include "cmCMakeHostSystemInformationCommand.h"
+#  include "cmExportCommand.h"
+#  include "cmExportLibraryDependenciesCommand.h"
+#  include "cmFLTKWrapUICommand.h"
+#  include "cmIncludeExternalMSProjectCommand.h"
+#  include "cmInstallProgramsCommand.h"
+#  include "cmLinkLibrariesCommand.h"
+#  include "cmLoadCacheCommand.h"
+#  include "cmLoadCommandCommand.h"
+#  include "cmOutputRequiredFilesCommand.h"
+#  include "cmQTWrapCPPCommand.h"
+#  include "cmQTWrapUICommand.h"
+#  include "cmRemoveCommand.h"
+#  include "cmRemoveDefinitionsCommand.h"
+#  include "cmSourceGroupCommand.h"
+#  include "cmSubdirDependsCommand.h"
+#  include "cmTargetLinkDirectoriesCommand.h"
+#  include "cmTargetLinkOptionsCommand.h"
+#  include "cmUseMangledMesaCommand.h"
+#  include "cmUtilitySourceCommand.h"
+#  include "cmVariableRequiresCommand.h"
+#  include "cmVariableWatchCommand.h"
+#  include "cmWriteFileCommand.h"
 #endif
 
 void GetScriptingCommands(cmState* state)
@@ -132,6 +137,7 @@ void GetScriptingCommands(cmState* state)
   state->AddBuiltinCommand("get_property", new cmGetPropertyCommand);
   state->AddBuiltinCommand("if", new cmIfCommand);
   state->AddBuiltinCommand("include", new cmIncludeCommand);
+  state->AddBuiltinCommand("include_guard", new cmIncludeGuardCommand);
   state->AddBuiltinCommand("list", new cmListCommand);
   state->AddBuiltinCommand("macro", new cmMacroCommand);
   state->AddBuiltinCommand("make_directory", new cmMakeDirectoryCommand);
@@ -154,32 +160,39 @@ void GetScriptingCommands(cmState* state)
   state->AddBuiltinCommand("while", new cmWhileCommand);
 
   state->AddUnexpectedCommand(
-    "else", "An ELSE command was found outside of a proper "
-            "IF ENDIF structure. Or its arguments did not match "
-            "the opening IF command.");
+    "else",
+    "An ELSE command was found outside of a proper "
+    "IF ENDIF structure. Or its arguments did not match "
+    "the opening IF command.");
   state->AddUnexpectedCommand(
-    "elseif", "An ELSEIF command was found outside of a proper "
-              "IF ENDIF structure.");
+    "elseif",
+    "An ELSEIF command was found outside of a proper "
+    "IF ENDIF structure.");
   state->AddUnexpectedCommand(
-    "endforeach", "An ENDFOREACH command was found outside of a proper "
-                  "FOREACH ENDFOREACH structure. Or its arguments did "
-                  "not match the opening FOREACH command.");
+    "endforeach",
+    "An ENDFOREACH command was found outside of a proper "
+    "FOREACH ENDFOREACH structure. Or its arguments did "
+    "not match the opening FOREACH command.");
   state->AddUnexpectedCommand(
-    "endfunction", "An ENDFUNCTION command was found outside of a proper "
-                   "FUNCTION ENDFUNCTION structure. Or its arguments did not "
-                   "match the opening FUNCTION command.");
+    "endfunction",
+    "An ENDFUNCTION command was found outside of a proper "
+    "FUNCTION ENDFUNCTION structure. Or its arguments did not "
+    "match the opening FUNCTION command.");
   state->AddUnexpectedCommand(
-    "endif", "An ENDIF command was found outside of a proper "
-             "IF ENDIF structure. Or its arguments did not match "
-             "the opening IF command.");
+    "endif",
+    "An ENDIF command was found outside of a proper "
+    "IF ENDIF structure. Or its arguments did not match "
+    "the opening IF command.");
   state->AddUnexpectedCommand(
-    "endmacro", "An ENDMACRO command was found outside of a proper "
-                "MACRO ENDMACRO structure. Or its arguments did not "
-                "match the opening MACRO command.");
+    "endmacro",
+    "An ENDMACRO command was found outside of a proper "
+    "MACRO ENDMACRO structure. Or its arguments did not "
+    "match the opening MACRO command.");
   state->AddUnexpectedCommand(
-    "endwhile", "An ENDWHILE command was found outside of a proper "
-                "WHILE ENDWHILE structure. Or its arguments did not "
-                "match the opening WHILE command.");
+    "endwhile",
+    "An ENDWHILE command was found outside of a proper "
+    "WHILE ENDWHILE structure. Or its arguments did not "
+    "match the opening WHILE command.");
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
   state->AddBuiltinCommand("cmake_host_system_information",
@@ -236,12 +249,23 @@ void GetProjectCommands(cmState* state)
   state->AddBuiltinCommand("set_tests_properties",
                            new cmSetTestsPropertiesCommand);
   state->AddBuiltinCommand("subdirs", new cmSubdirCommand);
+  state->AddBuiltinCommand("target_compile_definitions",
+                           new cmTargetCompileDefinitionsCommand);
+  state->AddBuiltinCommand("target_compile_features",
+                           new cmTargetCompileFeaturesCommand);
+  state->AddBuiltinCommand("target_compile_options",
+                           new cmTargetCompileOptionsCommand);
+  state->AddBuiltinCommand("target_include_directories",
+                           new cmTargetIncludeDirectoriesCommand);
   state->AddBuiltinCommand("target_link_libraries",
                            new cmTargetLinkLibrariesCommand);
+  state->AddBuiltinCommand("target_sources", new cmTargetSourcesCommand);
   state->AddBuiltinCommand("try_compile", new cmTryCompileCommand);
   state->AddBuiltinCommand("try_run", new cmTryRunCommand);
 
 #if defined(CMAKE_BUILD_WITH_CMAKE)
+  state->AddBuiltinCommand("add_compile_definitions",
+                           new cmAddCompileDefinitionsCommand);
   state->AddBuiltinCommand("add_compile_options",
                            new cmAddCompileOptionsCommand);
   state->AddBuiltinCommand("aux_source_directory",
@@ -251,22 +275,18 @@ void GetProjectCommands(cmState* state)
   state->AddBuiltinCommand("include_external_msproject",
                            new cmIncludeExternalMSProjectCommand);
   state->AddBuiltinCommand("install_programs", new cmInstallProgramsCommand);
+  state->AddBuiltinCommand("add_link_options", new cmAddLinkOptionsCommand);
   state->AddBuiltinCommand("link_libraries", new cmLinkLibrariesCommand);
+  state->AddBuiltinCommand("target_link_options",
+                           new cmTargetLinkOptionsCommand);
+  state->AddBuiltinCommand("target_link_directories",
+                           new cmTargetLinkDirectoriesCommand);
   state->AddBuiltinCommand("load_cache", new cmLoadCacheCommand);
   state->AddBuiltinCommand("qt_wrap_cpp", new cmQTWrapCPPCommand);
   state->AddBuiltinCommand("qt_wrap_ui", new cmQTWrapUICommand);
   state->AddBuiltinCommand("remove_definitions",
                            new cmRemoveDefinitionsCommand);
   state->AddBuiltinCommand("source_group", new cmSourceGroupCommand);
-  state->AddBuiltinCommand("target_compile_definitions",
-                           new cmTargetCompileDefinitionsCommand);
-  state->AddBuiltinCommand("target_compile_features",
-                           new cmTargetCompileFeaturesCommand);
-  state->AddBuiltinCommand("target_compile_options",
-                           new cmTargetCompileOptionsCommand);
-  state->AddBuiltinCommand("target_include_directories",
-                           new cmTargetIncludeDirectoriesCommand);
-  state->AddBuiltinCommand("target_sources", new cmTargetSourcesCommand);
 
   state->AddDisallowedCommand(
     "export_library_dependencies", new cmExportLibraryDependenciesCommand,
@@ -341,7 +361,7 @@ void GetProjectCommandsInScriptMode(cmState* state)
   CM_UNEXPECTED_PROJECT_COMMAND("try_compile");
   CM_UNEXPECTED_PROJECT_COMMAND("try_run");
 
-  // deprected commands
+  // deprecated commands
   CM_UNEXPECTED_PROJECT_COMMAND("export_library_dependencies");
   CM_UNEXPECTED_PROJECT_COMMAND("load_command");
   CM_UNEXPECTED_PROJECT_COMMAND("output_required_files");

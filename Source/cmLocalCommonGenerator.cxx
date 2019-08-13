@@ -2,6 +2,7 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmLocalCommonGenerator.h"
 
+#include <utility>
 #include <vector>
 
 #include "cmGeneratorTarget.h"
@@ -11,10 +12,9 @@
 class cmGlobalGenerator;
 
 cmLocalCommonGenerator::cmLocalCommonGenerator(cmGlobalGenerator* gg,
-                                               cmMakefile* mf,
-                                               std::string const& wd)
+                                               cmMakefile* mf, std::string wd)
   : cmLocalGenerator(gg, mf)
-  , WorkingDirectory(wd)
+  , WorkingDirectory(std::move(wd))
 {
   // Store the configuration name that will be generated.
   if (const char* config = this->Makefile->GetDefinition("CMAKE_BUILD_TYPE")) {
@@ -22,13 +22,11 @@ cmLocalCommonGenerator::cmLocalCommonGenerator(cmGlobalGenerator* gg,
     this->ConfigName = config;
   } else {
     // No configuration type given.
-    this->ConfigName = "";
+    this->ConfigName.clear();
   }
 }
 
-cmLocalCommonGenerator::~cmLocalCommonGenerator()
-{
-}
+cmLocalCommonGenerator::~cmLocalCommonGenerator() = default;
 
 std::string cmLocalCommonGenerator::GetTargetFortranFlags(
   cmGeneratorTarget const* target, std::string const& config)
@@ -46,16 +44,15 @@ std::string cmLocalCommonGenerator::GetTargetFortranFlags(
     target->GetFortranModuleDirectory(this->WorkingDirectory);
   if (!mod_dir.empty()) {
     mod_dir = this->ConvertToOutputFormat(
-      this->ConvertToRelativePath(this->WorkingDirectory, mod_dir),
+      this->MaybeConvertToRelativePath(this->WorkingDirectory, mod_dir),
       cmOutputConverter::SHELL);
   } else {
     mod_dir =
       this->Makefile->GetSafeDefinition("CMAKE_Fortran_MODDIR_DEFAULT");
   }
   if (!mod_dir.empty()) {
-    const char* moddir_flag =
+    std::string modflag =
       this->Makefile->GetRequiredDefinition("CMAKE_Fortran_MODDIR_FLAG");
-    std::string modflag = moddir_flag;
     modflag += mod_dir;
     this->AppendFlags(flags, modflag);
   }
@@ -67,13 +64,26 @@ std::string cmLocalCommonGenerator::GetTargetFortranFlags(
         this->Makefile->GetDefinition("CMAKE_Fortran_MODPATH_FLAG")) {
     std::vector<std::string> includes;
     this->GetIncludeDirectories(includes, target, "C", config);
-    for (std::vector<std::string>::const_iterator idi = includes.begin();
-         idi != includes.end(); ++idi) {
+    for (std::string const& id : includes) {
       std::string flg = modpath_flag;
-      flg += this->ConvertToOutputFormat(*idi, cmOutputConverter::SHELL);
+      flg += this->ConvertToOutputFormat(id, cmOutputConverter::SHELL);
       this->AppendFlags(flags, flg);
     }
   }
 
   return flags;
+}
+
+void cmLocalCommonGenerator::ComputeObjectFilenames(
+  std::map<cmSourceFile const*, std::string>& mapping,
+  cmGeneratorTarget const* gt)
+{
+  // Determine if these object files should use a custom extension
+  char const* custom_ext = gt->GetCustomObjectExtension();
+  for (auto& si : mapping) {
+    cmSourceFile const* sf = si.first;
+    bool keptSourceExtension;
+    si.second = this->GetObjectFileNameWithoutTarget(
+      *sf, gt->ObjectDirectory, &keptSourceExtension, custom_ext);
+  }
 }

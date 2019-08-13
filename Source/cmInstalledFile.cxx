@@ -7,24 +7,16 @@
 #include "cmMakefile.h"
 #include "cmSystemTools.h"
 
-#include "cmConfigure.h"
 #include <utility>
 
-cmInstalledFile::cmInstalledFile()
-  : NameExpression(CM_NULLPTR)
-{
-}
+cmInstalledFile::cmInstalledFile() = default;
 
 cmInstalledFile::~cmInstalledFile()
 {
-  if (NameExpression) {
-    delete NameExpression;
-  }
+  delete NameExpression;
 }
 
-cmInstalledFile::Property::Property()
-{
-}
+cmInstalledFile::Property::Property() = default;
 
 cmInstalledFile::Property::~Property()
 {
@@ -91,11 +83,9 @@ bool cmInstalledFile::GetProperty(const std::string& prop,
   std::string output;
   std::string separator;
 
-  for (ExpressionVectorType::const_iterator j =
-         property.ValueExpressions.begin();
-       j != property.ValueExpressions.end(); ++j) {
+  for (auto ve : property.ValueExpressions) {
     output += separator;
-    output += (*j)->GetInput();
+    output += ve->GetInput();
     separator = ";";
   }
 
@@ -107,7 +97,7 @@ bool cmInstalledFile::GetPropertyAsBool(const std::string& prop) const
 {
   std::string value;
   bool isSet = this->GetProperty(prop, value);
-  return isSet && cmSystemTools::IsOn(value.c_str());
+  return isSet && cmSystemTools::IsOn(value);
 }
 
 void cmInstalledFile::GetPropertyAsList(const std::string& prop,

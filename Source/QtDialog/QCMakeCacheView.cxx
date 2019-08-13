@@ -23,7 +23,7 @@ public:
   }
 
 protected:
-  bool filterAcceptsRow(int row, const QModelIndex& p) const CM_OVERRIDE
+  bool filterAcceptsRow(int row, const QModelIndex& p) const override
   {
     QStringList strs;
     const QAbstractItemModel* m = this->sourceModel();
@@ -77,7 +77,7 @@ public:
 protected:
   bool ShowAdvanced;
 
-  bool filterAcceptsRow(int row, const QModelIndex& p) const CM_OVERRIDE
+  bool filterAcceptsRow(int row, const QModelIndex& p) const override
   {
     const QAbstractItemModel* m = this->sourceModel();
     QModelIndex idx = m->index(row, 0, p);
@@ -186,9 +186,7 @@ QCMakeCacheModel::QCMakeCacheModel(QObject* p)
   this->setHorizontalHeaderLabels(labels);
 }
 
-QCMakeCacheModel::~QCMakeCacheModel()
-{
-}
+QCMakeCacheModel::~QCMakeCacheModel() = default;
 
 static uint qHash(const QCMakeProperty& p)
 {
@@ -248,9 +246,9 @@ void QCMakeCacheModel::setProperties(const QCMakePropertyList& props)
     }
   } else if (this->View == GroupView) {
     QMap<QString, QCMakePropertyList> newPropsTree;
-    this->breakProperties(newProps, newPropsTree);
+    QCMakeCacheModel::breakProperties(newProps, newPropsTree);
     QMap<QString, QCMakePropertyList> newPropsTree2;
-    this->breakProperties(newProps2, newPropsTree2);
+    QCMakeCacheModel::breakProperties(newProps2, newPropsTree2);
 
     QStandardItem* root = this->invisibleRootItem();
 
@@ -539,7 +537,7 @@ QWidget* QCMakeCacheModelDelegate::createEditor(
   QModelIndex var = idx.sibling(idx.row(), 0);
   int type = var.data(QCMakeCacheModel::TypeRole).toInt();
   if (type == QCMakeProperty::BOOL) {
-    return CM_NULLPTR;
+    return nullptr;
   }
   if (type == QCMakeProperty::PATH) {
     QCMakePathEditor* editor =
@@ -614,7 +612,7 @@ bool QCMakeCacheModelDelegate::editorEvent(QEvent* e,
 // Can remove this function and FileDialogFlag when minimum Qt version is 4.5
 bool QCMakeCacheModelDelegate::eventFilter(QObject* object, QEvent* evt)
 {
-  // workaround for what looks like a bug in Qt on Mac OS X
+  // workaround for what looks like a bug in Qt on macOS
   // where it doesn't create a QWidget wrapper for the native file dialog
   // so the Qt library ends up assuming the focus was lost to something else
 
@@ -642,7 +640,7 @@ QSize QCMakeCacheModelDelegate::sizeHint(const QStyleOptionViewItem& option,
   QStyleOptionButton opt;
   opt.QStyleOption::operator=(option);
   sz = sz.expandedTo(
-    style->subElementRect(QStyle::SE_ViewItemCheckIndicator, &opt, CM_NULLPTR)
+    style->subElementRect(QStyle::SE_ViewItemCheckIndicator, &opt, nullptr)
       .size());
 
   return sz;

@@ -3,7 +3,7 @@
 #ifndef cmCursesMainForm_h
 #define cmCursesMainForm_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmCursesForm.h"
 #include "cmCursesStandardIncludes.h"
@@ -23,11 +23,12 @@ class cmake;
  */
 class cmCursesMainForm : public cmCursesForm
 {
-  CM_DISABLE_COPY(cmCursesMainForm)
-
 public:
-  cmCursesMainForm(std::vector<std::string> const& args, int initwidth);
-  ~cmCursesMainForm() CM_OVERRIDE;
+  cmCursesMainForm(std::vector<std::string> args, int initwidth);
+  ~cmCursesMainForm() override;
+
+  cmCursesMainForm(cmCursesMainForm const&) = delete;
+  cmCursesMainForm& operator=(cmCursesMainForm const&) = delete;
 
   /**
    * Set the widgets which represent the cache entries.
@@ -37,13 +38,13 @@ public:
   /**
    * Handle user input.
    */
-  void HandleInput() CM_OVERRIDE;
+  void HandleInput() override;
 
   /**
    * Display form. Use a window of size width x height, starting
    * at top, left.
    */
-  void Render(int left, int top, int width, int height) CM_OVERRIDE;
+  void Render(int left, int top, int width, int height) override;
 
   /**
    * Returns true if an entry with the given key is in the
@@ -64,7 +65,7 @@ public:
    * exception is during a resize. The optional argument specifies the
    * string to be displayed in the status bar.
    */
-  void UpdateStatusBar() CM_OVERRIDE { this->UpdateStatusBar(CM_NULLPTR); }
+  void UpdateStatusBar() override { this->UpdateStatusBar(nullptr); }
   virtual void UpdateStatusBar(const char* message);
 
   /**
@@ -80,7 +81,7 @@ public:
    * During a CMake run, an error handle should add errors
    * to be displayed afterwards.
    */
-  void AddError(const char* message, const char* title) CM_OVERRIDE;
+  void AddError(const std::string& message, const char* title) override;
 
   /**
    * Used to do a configure. If argument is specified, it does only the check
@@ -101,8 +102,7 @@ public:
   /**
    * Progress callback
    */
-  static void UpdateProgressOld(const char* msg, float prog, void*);
-  static void UpdateProgress(const char* msg, float prog, void*);
+  void UpdateProgress(const std::string& msg, float prog);
 
 protected:
   // Copy the cache values from the user interface to the actual
@@ -125,7 +125,7 @@ protected:
   std::vector<cmCursesCacheEntryComposite*>* Entries;
   // Errors produced during last run of cmake
   std::vector<std::string> Errors;
-  // Command line argumens to be passed to cmake each time
+  // Command line arguments to be passed to cmake each time
   // it is run
   std::vector<std::string> Args;
   // Message displayed when user presses 'h'

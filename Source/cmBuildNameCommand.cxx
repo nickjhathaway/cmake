@@ -36,12 +36,12 @@ bool cmBuildNameCommand::InitialPass(std::vector<std::string> const& args,
 
   std::string buildname = "WinNT";
   if (this->Makefile->GetDefinition("UNIX")) {
-    buildname = "";
+    buildname.clear();
     cmSystemTools::RunSingleCommand("uname -a", &buildname, &buildname);
     if (!buildname.empty()) {
       std::string RegExp = "([^ ]*) [^ ]* ([^ ]*) ";
-      cmsys::RegularExpression reg(RegExp.c_str());
-      if (reg.find(buildname.c_str())) {
+      cmsys::RegularExpression reg(RegExp);
+      if (reg.find(buildname)) {
         buildname = reg.match(1) + "-" + reg.match(2);
       }
     }

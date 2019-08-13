@@ -8,14 +8,12 @@
 #ifndef cmDynamicLoader_h
 #define cmDynamicLoader_h
 
-#include "cmConfigure.h"
+#include "cmConfigure.h" // IWYU pragma: keep
 
 #include "cmsys/DynamicLoader.hxx" // IWYU pragma: export
 
 class cmDynamicLoader
 {
-  CM_DISABLE_COPY(cmDynamicLoader)
-
 public:
   // Description:
   // Load a dynamic library into the current process.
@@ -28,8 +26,8 @@ public:
   static void FlushCache();
 
 protected:
-  cmDynamicLoader() {}
-  ~cmDynamicLoader() {}
+  cmDynamicLoader() = default;
+  ~cmDynamicLoader() = default;
 };
 
 #endif
